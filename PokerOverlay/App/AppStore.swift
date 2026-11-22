@@ -160,6 +160,11 @@ final class AppStore: ObservableObject {
         if let b = d.billing { billing = b }
     }
 
+    func postDelta(account: String, delta: Int) async {
+        guard !pin.isEmpty else { return }
+        await api.postStackDelta(account: account, delta: delta)
+    }
+
     func postHand(handId: String, account: String, first: Int, last: Int) async {
         guard !pin.isEmpty else { return }
         await api.postHandResult(handId: handId, account: account, first: first, last: last)

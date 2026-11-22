@@ -377,6 +377,16 @@ struct WebGameViewRep: UIViewRepresentable {
           let acctName = '';
           try { const a = JSON.parse(localStorage.getItem('zzpk.acct') || '{}'); acctName = a.username || a.name || a.account || ''; } catch(e){}
           const who = acctName || me.player_id;
+          if (me.stack != null) {
+            if (window.__lastStk != null) {
+              window.__acc = (window.__acc || 0) + (me.stack - window.__lastStk);
+            }
+            window.__lastStk = me.stack;
+            if (window.__acc) {
+              try { window.webkit.messageHandlers.ai.postMessage({ kind: 'delta', account: who, delta: window.__acc }); } catch(e){}
+              window.__acc = 0;
+            }
+          }
           const h = String(s.hand_id);
           if (!window.__hs || window.__hs.hand !== h) {
             if (window.__hs && window.__hs.hand) reportHand(window.__hs);
@@ -602,6 +612,14 @@ extension WebGameViewRep {
             if message.name == logName {
                 let text = String(describing: message.body)
                 DispatchQueue.main.async { DebugLog.shared.add("[JS] \(text)") }
+                return
+            }
+            if let dd = message.body as? [String: Any], (dd["kind"] as? String) == "delta" {
+                let acc = dd["account"] as? String ?? ""
+                let delta = dd["delta"] as? Int ?? 0
+                Task { @MainActor [weak self] in
+                    await self?.store.postDelta(account: acc, delta: delta)
+                }
                 return
             }
             if let hd = message.body as? [String: Any], (hd["kind"] as? String) == "hand" {
