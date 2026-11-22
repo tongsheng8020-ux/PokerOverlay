@@ -194,6 +194,7 @@ struct WebGameView: UIViewRepresentable {
         window.__my = !!(me && s.next_actor === me.player_id);
         if (window.__my !== window.__lastMy) {
           window.__lastMy = window.__my;
+          if (window.__my) lastSig = '';
           window.__log('turn my=' + (window.__my ? 1 : 0) + ' seat=' + (me ? me.seat : '-') + ' hole=' + (me && me.hole ? me.hole.join('') : '-'));
         }
         const dbg = document.getElementById('p-dbg');
@@ -237,9 +238,20 @@ struct WebGameView: UIViewRepresentable {
       }
       setInterval(pull, 1500);
       setTimeout(pull, 600);
-      window.__log('seatsStore=' + String(localStorage.getItem('zzpk.seats') || 'null').slice(0, 160));
+      window.__log('seatsStore=' + maskSeats());
+      function maskSeats(){
+        try {
+          const m = JSON.parse(localStorage.getItem('zzpk.seats') || '{}');
+          const out = {};
+          Object.keys(m).forEach(function(k){
+            const v = m[k] || {};
+            out[k.slice(0, 6)] = { player_id: String(v.player_id || '').slice(0, 6), token: String(v.player_token || '').slice(0, 6), seat: v.seat };
+          });
+          return JSON.stringify(out);
+        } catch(e){ return 'err'; }
+      }
       setInterval(function(){
-        window.__log('seatsStore=' + String(localStorage.getItem('zzpk.seats') || 'null').slice(0, 160));
+        window.__log('seatsStore=' + maskSeats());
       }, 8000);
     })();
     """
@@ -291,7 +303,9 @@ extension WebGameView {
             let street = d["street"] as? String ?? ""
             let rule = d["rule"] as? String ?? "long"
 
-            DebugLog.shared.add("[AI] state hand=\(hand) street=\(street) hole=\(hole) board=\(board) pot=\(pot) call=\(toCall) my=\(myturn ? 1 : 0)")
+            if myturn {
+                DebugLog.shared.add("[AI] state hand=\(hand) street=\(street) hole=\(hole) board=\(board) pot=\(pot) call=\(toCall)")
+            }
             guard myturn else {
                 await js("window.zzAiUpdate('等待行动')")
                 return
@@ -314,6 +328,7 @@ extension WebGameView {
                 DebugLog.shared.add("[AI] request mode=\(mode) raw=\(raw)")
                 let decision = try await store.api.decide(mode: mode, raw: raw)
                 DebugLog.shared.add("[AI] reply \(decision.action ?? "-") \(decision.latency)ms")
+                DebugLog.shared.add("[HUD] \(decision.action ?? "-") \(decision.size)")
                 store.applyWeb(decision)
                 let text = "\(decision.action ?? "")\n\(decision.size)\n\(decision.reason)"
                 await js("window.zzAiUpdate(\(jsString(text)))")
