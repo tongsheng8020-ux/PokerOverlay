@@ -180,10 +180,35 @@ struct WebGameView: UIViewRepresentable {
 
       let lastSig = '';
       window.__my = false;
+      window.__hist = [];
+      window.__prevSnap = null;
+
+      function streetName(x){
+        return ({pre:'翻前', flop:'翻牌', turn:'转牌', river:'河牌'})[x] || x || '';
+      }
+      function track(s){
+        const p = window.__prevSnap;
+        window.__prevSnap = s;
+        if (!p) return;
+        const h = window.__hist;
+        if (s.street !== p.street && s.street) h.push('到' + streetName(s.street));
+        const prev = {};
+        (p.seats || []).forEach(function(x){ prev[x.seat] = x; });
+        (s.seats || []).forEach(function(x){
+          const q = prev[x.seat];
+          if (!q) return;
+          if (!q.folded && x.folded) h.push('座' + x.seat + '弃牌');
+          const d = (x.total_contribution || 0) - (q.total_contribution || 0);
+          if (d > 0) h.push('座' + x.seat + '投入+' + d);
+          if (!q.all_in && x.all_in) h.push('座' + x.seat + '全下');
+        });
+        while (h.length > 10) h.shift();
+      }
 
       function poll(){
         const s = window.__s;
         if (!s) return;
+        track(s);
         const vobj = (s.viewer && typeof s.viewer === 'object') ? s.viewer : null;
         let vid = (typeof s.viewer === 'string' && s.viewer !== 'spectator') ? s.viewer : null;
         const map = seatsMap();
@@ -225,6 +250,10 @@ struct WebGameView: UIViewRepresentable {
             currentBet: s.current_bet || 0,
             minRaise: s.min_raise_to || 0,
             active: (s.seats || []).filter(function(x){ return !x.folded; }).length,
+            history: window.__hist.join('；'),
+            opponents: (s.seats || []).map(function(x){
+              return { id: x.player_id, folded: !!x.folded, contrib: x.total_contribution || 0, allin: !!x.all_in };
+            }),
             seats: (s.seats || []).map(function(x){
               return { seat: x.seat, stack: x.stack, folded: !!x.folded,
                        allin: !!x.all_in, contrib: x.total_contribution || 0,
@@ -372,6 +401,8 @@ extension WebGameView {
             let legal = d["legal"] as? String ?? ""
             let mySeat = d["mySeat"] as? Int ?? -1
             let activePlayers = d["active"] as? Int ?? 0
+            let history = d["history"] as? String ?? ""
+            let opponents = (d["opponents"] as? [[String: Any]]) ?? []
             let button = d["button"] as? Int ?? -1
             let curBet = d["currentBet"] as? Int ?? 0
             let minRaise = d["minRaise"] as? Int ?? 0
@@ -405,11 +436,14 @@ extension WebGameView {
             defer { inFlight = false }
 
             let mode = store.mode
-            let raw = "\(mode == "short" ? "S6" : "L6") 网页牌桌 \(hole) | \(board) | P:\(dsp(pot)) C:\(dsp(toCall)) | H:\(dsp(stack)) | 活跃:\(activePlayers)人 | 按钮位:\(button) | 对手:\(oppText) | 当前注:\(dsp(curBet)) 最小加注到:\(dsp(minRaise)) | 计数单位:1 = \(unit) 筹码 | 合法动作:\(legal) | 注意：C>0 时不能 CHECK，只能 CALL/RAISE/FOLD；C=0 时不能 CALL | 所有尺寸都用上面这个显示单位 | 他行动完轮到我"
+            let raw = "\(mode == "short" ? "S6" : "L6") 网页牌桌 \(hole) | \(board) | P:\(dsp(pot)) C:\(dsp(toCall)) | H:\(dsp(stack)) | 活跃:\(activePlayers)人 | 按钮位:\(button) | 对手:\(oppText)\(history.isEmpty ? "" : " | 行动:\(history)") | 当前注:\(dsp(curBet)) 最小加注到:\(dsp(minRaise)) | 计数单位:1 = \(unit) 筹码 | 合法动作:\(legal) | 注意：C>0 时不能 CHECK，只能 CALL/RAISE/FOLD；C=0 时不能 CALL | 所有尺寸都用上面这个显示单位 | 他行动完轮到我"
             await js("window.zzAiUpdate('分析中…')")
             do {
                 DebugLog.shared.add("[AI] request mode=\(mode) raw=\(raw)")
-                let decision = try await store.api.decide(mode: mode, raw: raw)
+                let decision = try await store.api.decide(
+                    mode: mode, raw: raw,
+                    extra: ["hand_id": hand, "street": street, "opponents": opponents]
+                )
                 DebugLog.shared.add("[AI] reply \(decision.action ?? "-") \(decision.latency)ms")
                 var act = (decision.action ?? "").uppercased()
                 if toCall > 0 && (act == "CHECK" || act.isEmpty) {
