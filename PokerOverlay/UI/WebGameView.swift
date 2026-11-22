@@ -181,6 +181,8 @@ struct WebGameView: UIViewRepresentable {
       let lastSig = '';
       window.__my = false;
       window.__hist = [];
+      window.__acts = [];
+      window.__handId = null;
       window.__prevSnap = null;
 
       function streetName(x){
@@ -191,15 +193,28 @@ struct WebGameView: UIViewRepresentable {
         window.__prevSnap = s;
         if (!p) return;
         const h = window.__hist;
+        if (s.hand_id !== window.__handId) { window.__handId = s.hand_id; window.__acts = []; window.__hist = []; }
         if (s.street !== p.street && s.street) h.push('到' + streetName(s.street));
         const prev = {};
         (p.seats || []).forEach(function(x){ prev[x.seat] = x; });
         (s.seats || []).forEach(function(x){
           const q = prev[x.seat];
           if (!q) return;
-          if (!q.folded && x.folded) h.push('座' + x.seat + '弃牌');
-          const d = (x.total_contribution || 0) - (q.total_contribution || 0);
-          if (d > 0) h.push('座' + x.seat + '投入+' + d);
+          if (!q.folded && x.folded) {
+            h.push('座' + x.seat + '弃牌');
+            window.__acts.push({ id: x.player_id, street: s.street || '', kind: 'fold', amount: 0 });
+          }
+          const dc = (x.total_contribution || 0) - (q.total_contribution || 0);
+          if (dc > 0) {
+            h.push('座' + x.seat + '投入+' + dc);
+            const need = s.to_call || 0;
+            let kind = 'bet';
+            if (dc <= need + 1) kind = 'call';
+            if (x.all_in && !q.all_in) kind = 'allin';
+            window.__acts.push({ id: x.player_id, street: s.street || '', kind: kind, amount: dc });
+          } else if (!q.acted && x.acted && !x.folded) {
+            window.__acts.push({ id: x.player_id, street: s.street || '', kind: 'check', amount: 0 });
+          }
           if (!q.all_in && x.all_in) h.push('座' + x.seat + '全下');
         });
         while (h.length > 10) h.shift();
@@ -251,6 +266,7 @@ struct WebGameView: UIViewRepresentable {
             minRaise: s.min_raise_to || 0,
             active: (s.seats || []).filter(function(x){ return !x.folded; }).length,
             history: window.__hist.join('；'),
+            actions: window.__acts.slice(-40),
             opponents: (s.seats || []).map(function(x){
               return { id: x.player_id, folded: !!x.folded, contrib: x.total_contribution || 0, allin: !!x.all_in };
             }),
@@ -403,6 +419,7 @@ extension WebGameView {
             let activePlayers = d["active"] as? Int ?? 0
             let history = d["history"] as? String ?? ""
             let opponents = (d["opponents"] as? [[String: Any]]) ?? []
+            let actions = (d["actions"] as? [[String: Any]]) ?? []
             let button = d["button"] as? Int ?? -1
             let curBet = d["currentBet"] as? Int ?? 0
             let minRaise = d["minRaise"] as? Int ?? 0
@@ -442,7 +459,7 @@ extension WebGameView {
                 DebugLog.shared.add("[AI] request mode=\(mode) raw=\(raw)")
                 let decision = try await store.api.decide(
                     mode: mode, raw: raw,
-                    extra: ["hand_id": hand, "street": street, "opponents": opponents]
+                    extra: ["hand_id": hand, "street": street, "opponents": opponents, "actions": actions]
                 )
                 DebugLog.shared.add("[AI] reply \(decision.action ?? "-") \(decision.latency)ms")
                 var act = (decision.action ?? "").uppercased()
