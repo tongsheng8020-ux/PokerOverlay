@@ -94,8 +94,7 @@ struct SettingsView: View {
         testResult = nil
         do {
             let h = try await store.api.health()
-            let model = h["model"] as? String ?? "?"
-            testResult = "连接成功 · \(model)"
+            testResult = "连接成功"
             store.serverOK = true
             await store.refreshAll()
         } catch {

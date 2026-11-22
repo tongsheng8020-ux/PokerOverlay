@@ -472,7 +472,9 @@ extension WebGameView {
                 DebugLog.shared.add("[AI] request mode=\(mode) raw=\(raw)")
                 let decision = try await store.api.decide(
                     mode: mode, raw: raw,
-                    extra: ["hand_id": hand, "street": street, "opponents": opponents, "actions": actions]
+                    extra: ["hand_id": hand, "street": street, "opponents": opponents,
+                            "actions": actions, "hole": hole, "board": board,
+                            "pot": pot, "to_call": toCall]
                 )
                 DebugLog.shared.add("[AI] reply \(decision.action ?? "-") \(decision.latency)ms")
                 var act = (decision.action ?? "").uppercased()
