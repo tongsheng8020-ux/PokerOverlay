@@ -382,6 +382,7 @@ extension WebGameView {
 
         init(store: AppStore) {
             self.store = store
+            super.init()
             NotificationCenter.default.addObserver(
                 forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
             ) { [weak self] _ in
