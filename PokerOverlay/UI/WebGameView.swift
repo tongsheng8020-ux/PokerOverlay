@@ -185,10 +185,16 @@ struct WebGameView: UIViewRepresentable {
         const s = window.__s;
         if (!s) return;
         const vobj = (s.viewer && typeof s.viewer === 'object') ? s.viewer : null;
-        const vid = (typeof s.viewer === 'string' && s.viewer !== 'spectator') ? s.viewer : null;
+        let vid = (typeof s.viewer === 'string' && s.viewer !== 'spectator') ? s.viewer : null;
+        const map = seatsMap();
+        let entry = window.__rid ? map[window.__rid] : null;
+        if (!entry) { const ks = Object.keys(map); if (ks.length) entry = map[ks[ks.length - 1]]; }
+        if (!vid && entry && entry.player_id) vid = entry.player_id;
+        const fallbackSeat = (entry && entry.seat != null) ? entry.seat : null;
         const me = (s.seats || []).find(function(x){
           if (vobj && vobj.seat != null && x.seat === vobj.seat) return true;
           if (vid && x.player_id === vid) return true;
+          if (fallbackSeat != null && x.seat === fallbackSeat) return true;
           return false;
         }) || null;
         window.__my = !!(me && s.next_actor === me.player_id);
@@ -223,23 +229,37 @@ struct WebGameView: UIViewRepresentable {
         } catch(e){}
       }
 
+      function seatsMap(){
+        try { return JSON.parse(localStorage.getItem('zzpk.seats') || '{}'); } catch(e){ return {}; }
+      }
       async function pull(){
-        const rid = findRoom();
         const acct = acctTok();
-        if (!rid || !acct) { window.__log('pull skip rid=' + rid + ' acct=' + (acct ? 1 : 0)); return; }
-        const st = seatTok(rid);
-        const tk = st || acct;
+        if (!acct) { window.__log('pull skip acct=0'); return; }
+        const map = seatsMap();
+        const keys = Object.keys(map);
+        // 优先用“有座位凭证”的房间
+        let rid = null, entry = null;
+        if (keys.length) {
+          rid = keys[keys.length - 1];
+          entry = map[rid];
+        }
+        if (!rid) rid = findRoom();
+        if (!rid) { window.__log('pull skip rid=null'); return; }
+        window.__rid = rid;
+        const tk = (entry && entry.player_token) ? entry.player_token : acct;
         try {
           const h = { 'Authorization': 'Bearer ' + tk };
           if (acct) h['X-Account-Session'] = acct;
           const r = await fetch('/v1/rooms/' + rid + '/snapshot', { headers: h });
-          if (!r.ok) return;
+          if (!r.ok) { window.__log('snap http=' + r.status + ' room=' + rid.slice(0, 6) + ' seatTok=' + (entry ? 1 : 0)); return; }
           const j = await r.json();
           if (!j.viewer && window.__s && window.__s.viewer) j.viewer = window.__s.viewer;
           window.__s = j;
-          window.__log('snap viewer=' + JSON.stringify(j.viewer) + ' seat=' + ((j.viewer && typeof j.viewer === 'object' && j.viewer.seat != null) ? j.viewer.seat : '-') + ' seats=' + (j.seats ? j.seats.length : 0));
+          window.__log('snap room=' + rid.slice(0, 6) + ' seatTok=' + (entry ? 1 : 0) + ' viewer=' + JSON.stringify(j.viewer) + ' seats=' + (j.seats ? j.seats.length : 0));
           poll();
-        } catch(e){}
+        } catch(e){
+          window.__log('pull err=' + String(e).slice(0, 40));
+        }
       }
       setInterval(pull, 1500);
       setTimeout(pull, 600);
