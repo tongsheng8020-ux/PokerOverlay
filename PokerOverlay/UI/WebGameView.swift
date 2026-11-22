@@ -13,11 +13,13 @@ struct WebGameView: UIViewRepresentable {
         cfg.allowsInlineMediaPlayback = true
         cfg.mediaTypesRequiringUserActionForPlayback = []
         let uc = WKUserContentController()
-        uc.add(WeakScriptMessageHandler(context.coordinator), name: "ai")
-        uc.add(WeakScriptMessageHandler(context.coordinator), name: "log")
-                uc.addUserScript(WKUserScript(source: Self.injectedJS,
+        uc.add(WeakScriptMessageHandler(context.coordinator), name: context.coordinator.aiName)
+        uc.add(WeakScriptMessageHandler(context.coordinator), name: context.coordinator.logName)
+        let hudJS = Self.prepareJS(ai: context.coordinator.aiName, log: context.coordinator.logName)
+        uc.addUserScript(WKUserScript(source: hudJS,
                                       injectionTime: .atDocumentEnd,
-                                      forMainFrameOnly: false))
+                                      forMainFrameOnly: false,
+                                      in: Self.hudWorld))
         cfg.userContentController = uc
         let wv = WKWebView(frame: .zero, configuration: cfg)
         let osv = UIDevice.current.systemVersion.replacingOccurrences(of: ".", with: "_")
@@ -68,11 +70,24 @@ struct WebGameView: UIViewRepresentable {
     })();
     """
 
-    static func injectHUD(into webView: WKWebView) {
+    static let hudWorld = WKContentWorld.world(name: "hud")
+
+    static func prepareJS(ai: String, log: String) -> String {
+        var js = injectedJS
+        js = js.replacingOccurrences(of: "messageHandlers.ai", with: "messageHandlers.\(ai)")
+        js = js.replacingOccurrences(of: "messageHandlers.log", with: "messageHandlers.\(log)")
+        let suffix = String(ai.suffix(5))
+        js = js.replacingOccurrences(of: "p-hud", with: "p-hud-\(suffix)")
+        js = js.replacingOccurrences(of: "p-pill", with: "p-pill-\(suffix)")
+        return js
+    }
+
+    static func injectHUD(into webView: WKWebView, ai: String, log: String) {
         DebugLog.shared.add("[JS] reinject start")
-        webView.evaluateJavaScript("window.__h=false; window.__s=null;") { _, _ in
-            webView.evaluateJavaScript(Self.injectedJS) { _, err in
-                if let err {
+        let js = prepareJS(ai: ai, log: log)
+        webView.evaluateJavaScript("window.__h=false; window.__s=null;", in: nil, in: hudWorld) { _ in
+            webView.evaluateJavaScript(js, in: nil, in: hudWorld) { result in
+                if case .failure(let err) = result {
                     DebugLog.shared.add("[JS] inject err \(err.localizedDescription)")
                 } else {
                     DebugLog.shared.add("[JS] inject ok")
@@ -360,7 +375,7 @@ struct WebGameView: UIViewRepresentable {
           window.__log('pull err=' + String(e).slice(0, 40));
         }
       }
-      setInterval(pull, 1500);
+      (function jitter(){ setTimeout(function(){ pull(); jitter(); }, 1300 + Math.floor(Math.random()*500)); })();
       setTimeout(pull, 600);
       window.__log('seatsStore=' + maskSeats());
       function maskSeats(){
@@ -393,6 +408,8 @@ extension WebGameView {
     final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate, WKUIDelegate {
         var store: AppStore
         weak var webView: WKWebView?
+        let aiName = "m" + String(UUID().uuidString.prefix(6)).lowercased()
+        let logName = "s" + String(UUID().uuidString.prefix(6)).lowercased()
         private var lastKey = ""
         private var lastRoom = ""
         private var lastMyTurn = false
@@ -406,7 +423,7 @@ extension WebGameView {
             ) { [weak self] _ in
                 guard let self else { return }
                 DebugLog.shared.add("[APP] foreground, re-inject HUD")
-                if let wv = self.webView { WebGameView.injectHUD(into: wv) }
+                if let wv = self.webView { WebGameView.injectHUD(into: wv, ai: aiName, log: logName) }
             }
         }
 
@@ -417,7 +434,7 @@ extension WebGameView {
             DebugLog.shared.add("[JS] page finished")
             if !hudReinjected {
                 hudReinjected = true
-                WebGameView.injectHUD(into: webView)
+                WebGameView.injectHUD(into: webView, ai: aiName, log: logName)
             }
             if !locRequested {
                 locRequested = true
@@ -441,7 +458,7 @@ extension WebGameView {
         }
 
         func userContentController(_ uc: WKUserContentController, didReceive message: WKScriptMessage) {
-            if message.name == "log" {
+            if message.name == logName {
                 let text = String(describing: message.body)
                 DispatchQueue.main.async { DebugLog.shared.add("[JS] \(text)") }
                 return
@@ -611,7 +628,7 @@ extension WebGameView {
 
         @MainActor
         private func js(_ code: String) async {
-            _ = try? await webView?.evaluateJavaScript(code)
+            _ = try? await webView?.evaluateJavaScript(code, in: nil, in: WebGameView.hudWorld)
         }
 
         private func jsString(_ s: String) -> String {
