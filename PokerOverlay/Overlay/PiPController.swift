@@ -3,17 +3,6 @@ import AVFoundation
 import UIKit
 import Combine
 
-extension Data {
-    mutating func append(u32 v: UInt32) {
-        var x = v.littleEndian
-        withUnsafeBytes(of: &x) { append(contentsOf: ) }
-    }
-    mutating func append(u16 v: UInt16) {
-        var x = v.littleEndian
-        withUnsafeBytes(of: &x) { append(contentsOf: ) }
-    }
-}
-
 /// 用系统画中画把决策浮在游戏上面。
 /// PiP 是 iOS 上唯一能在别的 App 上方常驻显示第三方内容的系统能力。
 final class PiPController: NSObject, ObservableObject {
@@ -167,6 +156,17 @@ final class PiPController: NSObject, ObservableObject {
         }
     }
 
+    private func le32(_ v: UInt32) -> [UInt8] {
+        [UInt8(truncatingIfNeeded: v),
+         UInt8(truncatingIfNeeded: v >> 8),
+         UInt8(truncatingIfNeeded: v >> 16),
+         UInt8(truncatingIfNeeded: v >> 24)]
+    }
+
+    private func le16(_ v: UInt16) -> [UInt8] {
+        [UInt8(truncatingIfNeeded: v), UInt8(truncatingIfNeeded: v >> 8)]
+    }
+
     private func silentWavURL() -> URL? {
         let url = FileManager.default.temporaryDirectory.appendingPathComponent("poker_silence.wav")
         if FileManager.default.fileExists(atPath: url.path) { return url }
@@ -175,13 +175,13 @@ final class PiPController: NSObject, ObservableObject {
         let byteRate = rate * UInt32(ch) * UInt32(bits / 8)
         let dataSize = Int(rate) * Int(ch) * Int(bits / 8)
         d.append(contentsOf: Array("RIFF".utf8))
-        d.append(u32: 36 + UInt32(dataSize))
+        d.append(contentsOf: le32(36 + UInt32(dataSize)))
         d.append(contentsOf: Array("WAVEfmt ".utf8))
-        d.append(u32: 16); d.append(u16: 1); d.append(u16: ch)
-        d.append(u32: rate); d.append(u32: byteRate)
-        d.append(u16: UInt16(Int(ch) * Int(bits / 8))); d.append(u16: bits)
+        d.append(contentsOf: le32(16)); d.append(contentsOf: le16(1)); d.append(contentsOf: le16(ch))
+        d.append(contentsOf: le32(rate)); d.append(contentsOf: le32(byteRate))
+        d.append(contentsOf: le16(UInt16(Int(ch) * Int(bits / 8)))); d.append(contentsOf: le16(bits))
         d.append(contentsOf: Array("data".utf8))
-        d.append(u32: UInt32(dataSize))
+        d.append(contentsOf: le32(UInt32(dataSize)))
         d.append(Data(count: dataSize))
         do { try d.write(to: url) } catch {
             print("wav \(error)")
