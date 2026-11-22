@@ -86,12 +86,21 @@ struct WebGameView: UIViewRepresentable {
 
       const box = document.createElement('div');
       box.id = 'zz-ai-hud';
-      box.style.cssText = 'position:fixed;left:8px;right:8px;bottom:92px;z-index:2147483647;'
-        + 'background:rgba(8,12,18,.94);border:1px solid rgba(88,166,255,.55);border-radius:14px;'
-        + 'padding:10px 12px;color:#e9eef6;font:13px/1.55 -apple-system,PingFang SC,sans-serif;'
-        + 'box-shadow:0 10px 30px rgba(0,0,0,.55);display:none';
-      box.innerHTML = '<div style="color:#58a6ff;font-weight:700;margin-bottom:3px">AI 助手</div>'
-        + '<div id="zz-ai-act" style="white-space:pre-wrap">等待牌局…</div>';
+      box.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);left:8px;right:8px;z-index:2147483647;'
+        + 'background:rgba(8,12,18,.92);border:1px solid rgba(88,166,255,.55);border-radius:12px;'
+        + 'padding:6px 10px;color:#e9eef6;font:12.5px/1.45 -apple-system,PingFang SC,sans-serif;'
+        + 'box-shadow:0 8px 24px rgba(0,0,0,.5);display:none;max-height:62px;overflow:hidden;'
+        + 'transition:max-height .18s ease';
+      box.innerHTML = '<div style="color:#58a6ff;font-weight:700;font-size:11px;margin-bottom:2px">'
+        + 'AI 助手 · 点我展开/收起</div>'
+        + '<div id="zz-ai-act" style="white-space:pre-wrap;max-height:40px;overflow:hidden">等待牌局…</div>';
+      let expanded = false;
+      box.addEventListener('click', function(){
+        expanded = !expanded;
+        box.style.maxHeight = expanded ? '300px' : '62px';
+        const a = document.getElementById('zz-ai-act');
+        if (a) a.style.maxHeight = expanded ? '260px' : '40px';
+      });
       const mount = function(){ if (document.body && !document.getElementById('zz-ai-hud')) document.body.appendChild(box); };
       setInterval(mount, 800);
       mount();
