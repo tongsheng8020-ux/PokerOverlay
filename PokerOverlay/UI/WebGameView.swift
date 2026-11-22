@@ -80,7 +80,7 @@ struct WebGameView: UIViewRepresentable {
         if (m) window.__roomId = m[1];
         return origFetch.apply(this, args).then(function(r){
           try {
-            if (m) { r.clone().json().then(function(j){ window.__snap = j; poll(); }).catch(function(){}); }
+            if (m) { r.clone().json().then(function(j){ adopt(j); }).catch(function(){}); }
           } catch(e){}
           return r;
         });
@@ -92,7 +92,7 @@ struct WebGameView: UIViewRepresentable {
         if (m) {
           window.__roomId = m[1];
           this.addEventListener('load', function(){
-            try { window.__snap = JSON.parse(this.responseText); poll(); } catch(e){}
+            try { adopt(JSON.parse(this.responseText)); } catch(e){}
           });
         }
         return origOpen.apply(this, arguments);
@@ -112,15 +112,34 @@ struct WebGameView: UIViewRepresentable {
         } catch(e){}
         return null;
       }
+      function adopt(j){
+        if (!j) return;
+        if (!j.viewer && window.__snap && window.__snap.viewer) {
+          j.viewer = window.__snap.viewer;
+        }
+        window.__snap = j;
+        poll();
+      }
+      function seatTok(rid){
+        try {
+          const m = JSON.parse(localStorage.getItem('zzpk.seats') || '{}');
+          const v = m[rid];
+          if (!v) return null;
+          if (typeof v === 'string') return v;
+          return v.token || v.t || v.seatTok || null;
+        } catch(e){ return null; }
+      }
       async function pull(){
         if (!window.__roomId) window.__roomId = findRoomFromPerf();
-        const rid = window.__roomId, tk = token();
+        const rid = window.__roomId, acct = token();
+        const st = seatTok(rid);
+        const tk = st || acct;
         if (!rid || !tk) return;
         try {
-          const r = await origFetch('/v1/rooms/' + rid + '/snapshot', {
-            headers: { 'Authorization': 'Bearer ' + tk, 'X-Account-Session': tk }
-          });
-          if (r.ok) { window.__snap = await r.json(); poll(); }
+          const h = { 'Authorization': 'Bearer ' + tk };
+          if (acct) h['X-Account-Session'] = acct;
+          const r = await origFetch('/v1/rooms/' + rid + '/snapshot', { headers: h });
+          if (r.ok) { adopt(await r.json()); }
         } catch(e){}
       }
       setInterval(pull, 1200);
@@ -199,7 +218,7 @@ struct WebGameView: UIViewRepresentable {
         window.__zzSeated = !!me;
         window.__zzMyTurn = !!(me && s.next_actor === me.player_id);
         const dbg = document.getElementById('zz-ai-dbg');
-        if (dbg) dbg.textContent = 'snap✓ 座位' + (me ? me.seat : '-') + ' 手牌' +
+        if (dbg) dbg.textContent = 'snap✓ viewer' + (s.viewer ? '有' : '无') + ' 座位' + (me ? me.seat : '-') + ' 手牌' +
           (me && me.cards ? me.cards.length : 0) + ' 轮到我' + (window.__zzMyTurn ? '是' : '否');
         const sig = [s.hand_id, s.street, s.to_call, s.pot, (s.board||[]).join(''),
                      me ? (me.cards||[]).join('') : ''].join('|');
