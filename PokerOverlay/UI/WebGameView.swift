@@ -217,6 +217,7 @@ struct WebGameView: UIViewRepresentable {
         lastSig = sig;
         try {
           window.webkit.messageHandlers.ai.postMessage({
+            room: String(window.__room || '').slice(0, 8),
             hand: String(s.hand_id || '').slice(0, 8),
             street: s.street || '', pot: s.pot || 0, to_call: s.to_call || 0,
             board: (s.board || []).join(' '),
@@ -245,6 +246,15 @@ struct WebGameView: UIViewRepresentable {
         }
         if (!rid) rid = findRoom();
         if (!rid) { window.__log('pull skip rid=null'); return; }
+        if (rid !== window.__room) {
+          window.__room = rid;
+          window.__s = null;
+          window.__lastSeat = null;
+          window.__lastMy = null;
+          lastSig = '';
+          window.__log('room changed ' + String(rid).slice(0, 6));
+          try { window.zzAiUpdate('换桌了，等待牌局…'); } catch(e){}
+        }
         window.__rid = rid;
         const tk = (entry && entry.player_token) ? entry.player_token : acct;
         try {
@@ -295,6 +305,7 @@ extension WebGameView {
         var store: AppStore
         weak var webView: WKWebView?
         private var lastKey = ""
+        private var lastRoom = ""
         private var inFlight = false
 
         init(store: AppStore) { self.store = store }
@@ -318,6 +329,8 @@ extension WebGameView {
 
         @MainActor
         func handle(_ d: [String: Any]) async {
+            let room = d["room"] as? String ?? ""
+            if room != lastRoom { lastRoom = room; lastKey = "" }
             let hole = d["hole"] as? String ?? ""
             let board = d["board"] as? String ?? ""
             let myturn = d["myturn"] as? Bool ?? false

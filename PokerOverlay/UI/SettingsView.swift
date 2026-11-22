@@ -36,33 +36,9 @@ struct SettingsView: View {
                         Text("短牌 36").tag("short")
                     }
                     .pickerStyle(.segmented)
-                    Text("AI 按这里选的规则分析：长牌 52 张，短牌 36 张（三条>顺子、同花>葫芦）。")
+                    Text("AI 按这里选的规则分析：长牌 52 张；短牌 36 张（三条>顺子、同花>葫芦）。")
                         .font(.caption)
                         .foregroundStyle(.secondary)
-                }
-
-                Section("浮窗") {
-                    Toggle("决策自动朗读", isOn: $store.autoSpeak)
-                    Button {
-                        store.pip.update(store.decision ?? Decision(), mode: store.mode)
-                        store.startOverlay()
-                    } label: {
-                        Text("立即开启画中画浮窗")
-                    }
-                    if let err = store.pipError {
-                        Text(err).font(.caption).foregroundStyle(.orange)
-                    }
-                }
-
-                Section("实时识别") {
-                    HStack {
-                        Text("本机通道")
-                        Spacer()
-                        Text(store.bridgeConnected ? "已连接" : "等待直播")
-                            .foregroundStyle(store.bridgeConnected ? .green : .secondary)
-                    }
-                    Text(store.liveStatus).font(.caption).foregroundStyle(.secondary)
-                    NavigationLink("开启方法") { CaptureHelpView() }
                 }
 
                 Section("状态") {
@@ -78,18 +54,12 @@ struct SettingsView: View {
                         Text(store.pin.isEmpty ? "未设置" : "已设置")
                             .foregroundStyle(.secondary)
                     }
-                    HStack {
-                        Text("浮窗")
-                        Spacer()
-                        Text(store.pipActive ? "运行中" : "未开启").foregroundStyle(.secondary)
-                    }
                 }
 
                 Section {
-                    Text("长牌 52 张；短牌 36 张（三条 > 顺子，同花 > 葫芦）。")
-                        .font(.caption).foregroundStyle(.secondary)
-                    Text("版本 1.0 · DeepSeek 决策后端")
-                        .font(.caption2).foregroundStyle(.secondary)
+                    Text("牌桌页直接打开 zzpk.vip，AI 悬浮条在顶部；点条展开，点「收」收起，点「AI」气泡复原。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
             .navigationTitle("设置")
