@@ -2,6 +2,10 @@ import SwiftUI
 import WebKit
 import CoreLocation
 
+extension Notification.Name {
+    static let forceHUD = Notification.Name("forceHUD")
+}
+
 
 struct WebGameView: View {
     @EnvironmentObject var store: AppStore
@@ -505,6 +509,14 @@ extension WebGameViewRep {
         init(store: AppStore) {
             self.store = store
             super.init()
+            NotificationCenter.default.addObserver(
+                forName: .forceHUD, object: nil, queue: .main
+            ) { [weak self] _ in
+                guard let self, let wv = self.webView else { return }
+                DebugLog.shared.add("[HUD] manual force")
+                WebGameViewRep.injectHUD(into: wv, ai: self.aiName, log: self.logName)
+                wv.evaluateJavaScript("(function(){var b=document.querySelector('[id^=\"p-hud\"]'); if(b){b.style.display='block';}})()", in: nil, in: WKContentWorld.page) { _ in }
+            }
             NotificationCenter.default.addObserver(
                 forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
             ) { [weak self] _ in

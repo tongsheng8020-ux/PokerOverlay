@@ -60,6 +60,15 @@ struct SettingsView: View {
                             .foregroundStyle(store.keyRemaining == "已过期" ? .red : .secondary)
                     }
                     Button {
+                        NotificationCenter.default.post(name: .forceHUD, object: nil)
+                    } label: {
+                        HStack {
+                            Text("手动开启悬浮框")
+                            Spacer()
+                            Image(systemName: "arrow.clockwise").font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
+                    Button {
                         store.showPinGate = true
                     } label: {
                         HStack {
