@@ -26,7 +26,8 @@ targets:
       path: PokerOverlay/Info.plist
       properties:
         CFBundleDisplayName: 德州助手
-        CFBundleShortVersionString: "1.0"
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
         UILaunchScreen: {}
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
