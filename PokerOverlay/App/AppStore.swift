@@ -21,6 +21,7 @@ final class AppStore: ObservableObject {
     @Published var showPinGate = false
     @Published var serverOK: Bool?
     @Published var billing: Billing?
+    @Published var currentPlayerIds: [String] = []
     @Published var bridgeConnected = false
     @Published var pipActive = false
     @Published var pipPossible = false
