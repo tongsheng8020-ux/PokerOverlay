@@ -367,6 +367,7 @@ extension WebGameView {
         weak var webView: WKWebView?
         private var lastKey = ""
         private var lastRoom = ""
+        private var lastMyTurn = false
         private var inFlight = false
 
         init(store: AppStore) { self.store = store }
@@ -406,10 +407,19 @@ extension WebGameView {
                 DebugLog.shared.add("[AI] state hand=\(hand) street=\(street) hole=\(hole) board=\(board) pot=\(pot) call=\(toCall)")
             }
             guard myturn else {
+                if lastMyTurn {
+                    lastMyTurn = false
+                    DebugLog.shared.add("[WAIT] 非我行动")
+                }
                 await js("window.zzAiUpdate('等待行动')")
                 return
             }
+            if !lastMyTurn {
+                lastMyTurn = true
+                DebugLog.shared.add("[TURN] 轮到我 seat=\(mySeat) hole=\(hole)")
+            }
             guard !hole.isEmpty else {
+                DebugLog.shared.add("[SKIP] 轮到我但没读到牌 seat=\(mySeat)")
                 await js("window.zzAiUpdate('入座后才有牌')")
                 return
             }
@@ -447,7 +457,10 @@ extension WebGameView {
                 return x == x.rounded() ? String(Int(x)) : String(format: "%.2f", x)
             }
             let key = "\(hand)|\(street)|\(pot)|\(toCall)"
-            if key == lastKey || inFlight { return }
+            if key == lastKey || inFlight {
+                DebugLog.shared.add("[SKIP] 去重/在途 key=\(key) inflight=\(inFlight)")
+                return
+            }
             lastKey = key
             inFlight = true
             defer { inFlight = false }

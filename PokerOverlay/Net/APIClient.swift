@@ -34,8 +34,12 @@ struct APIClient {
     }
 
     private func send<T: Decodable>(_ req: URLRequest, as: T.Type) async throws -> T {
+        let started = Date()
         do {
             let (data, resp) = try await URLSession.shared.data(for: req)
+            let ms = Int(Date().timeIntervalSince(started) * 1000)
+            let code = (resp as? HTTPURLResponse)?.statusCode ?? -1
+            DebugLog.shared.add("[HTTP] \(req.httpMethod ?? "GET") \(req.url?.path ?? "") \(code) \(ms)ms")
             guard let http = resp as? HTTPURLResponse else { throw APIError.network("no response") }
             if http.statusCode != 200 {
                 throw APIError.status(http.statusCode, String(data: data, encoding: .utf8) ?? "")
@@ -48,6 +52,7 @@ struct APIClient {
         } catch let e as APIError {
             throw e
         } catch {
+            DebugLog.shared.add("[HTTP] ERR \(req.url?.path ?? "") \(error.localizedDescription)")
             throw APIError.network(error.localizedDescription)
         }
     }
