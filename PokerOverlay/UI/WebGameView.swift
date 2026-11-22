@@ -192,6 +192,11 @@ struct WebGameView: UIViewRepresentable {
           return false;
         }) || null;
         window.__my = !!(me && s.next_actor === me.player_id);
+        const seatNow = me ? me.seat : null;
+        if (seatNow !== window.__lastSeat) {
+          window.__lastSeat = seatNow;
+          window.__log('seated=' + (seatNow == null ? '-' : seatNow) + ' hole=' + (me && me.hole ? me.hole.join('') : '-'));
+        }
         if (window.__my !== window.__lastMy) {
           window.__lastMy = window.__my;
           if (window.__my) lastSig = '';
