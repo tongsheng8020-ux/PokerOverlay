@@ -36,6 +36,8 @@ targets:
         UIBackgroundModes:
           - audio
         NSLocalNetworkUsageDescription: 与屏幕识别扩展在本机通信，把牌局实时变成决策。
+        NSLocationWhenInUseUsageDescription: 牌局需要定位校验，用于正常入座。
+        NSLocationAlwaysAndWhenInUseUsageDescription: 牌局需要定位校验，用于正常入座。
     dependencies:
       - target: BroadcastExtension
         embed: true

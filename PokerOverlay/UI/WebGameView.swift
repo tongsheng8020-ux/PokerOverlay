@@ -1,7 +1,7 @@
 import SwiftUI
 import WebKit
 
-/// 直接打开 zzpk.vip 网页版，并注入 HUD 读牌局数据。
+/// 直接打开 zzpk.vip 网页版，注入假定位 + AI HUD。
 struct WebGameView: UIViewRepresentable {
     @EnvironmentObject var store: AppStore
 
@@ -13,12 +13,16 @@ struct WebGameView: UIViewRepresentable {
         cfg.mediaTypesRequiringUserActionForPlayback = []
         let uc = WKUserContentController()
         uc.add(WeakScriptMessageHandler(context.coordinator), name: "ai")
+        uc.addUserScript(WKUserScript(source: Self.fakeLocationJS,
+                                      injectionTime: .atDocumentStart,
+                                      forMainFrameOnly: false))
         uc.addUserScript(WKUserScript(source: Self.injectedJS,
                                       injectionTime: .atDocumentEnd,
                                       forMainFrameOnly: false))
         cfg.userContentController = uc
         let wv = WKWebView(frame: .zero, configuration: cfg)
         wv.navigationDelegate = context.coordinator
+        wv.uiDelegate = context.coordinator
         wv.scrollView.contentInsetAdjustmentBehavior = .never
         wv.load(URLRequest(url: URL(string: "https://zzpk.vip/?lang=zh-Hans")!))
         context.coordinator.webView = wv
@@ -28,6 +32,37 @@ struct WebGameView: UIViewRepresentable {
     func updateUIView(_ uiView: WKWebView, context: Context) {
         context.coordinator.store = store
     }
+
+    /// 假定位：把 navigator.geolocation 换成固定坐标（新加坡）。
+    static let fakeLocationJS = """
+    (function(){
+      if (window.__zzFakeGeo) return;
+      window.__zzFakeGeo = true;
+      var LAT = 1.3521, LNG = 103.8198;
+      function makePos(){
+        return { coords: { latitude: LAT, longitude: LNG, accuracy: 20,
+                           altitude: null, altitudeAccuracy: null, heading: null, speed: null },
+                 timestamp: Date.now() };
+      }
+      var geo = {
+        getCurrentPosition: function(ok, err, opt){ setTimeout(function(){ ok && ok(makePos()); }, 30); },
+        watchPosition: function(ok, err, opt){ setTimeout(function(){ ok && ok(makePos()); }, 30); return 1; },
+        clearWatch: function(){}
+      };
+      try { Object.defineProperty(navigator, 'geolocation', { value: geo, configurable: true }); }
+      catch(e) { navigator.geolocation.getCurrentPosition = geo.getCurrentPosition; }
+      if (navigator.permissions && navigator.permissions.query) {
+        var q = navigator.permissions.query.bind(navigator.permissions);
+        navigator.permissions.query = function(d){
+          if (d && d.name === 'geolocation') {
+            return Promise.resolve({ state: 'granted', onchange: null,
+              addEventListener: function(){}, removeEventListener: function(){} });
+          }
+          return q(d);
+        };
+      }
+    })();
+    """
 
     static let injectedJS = """
     (function(){
@@ -89,8 +124,7 @@ struct WebGameView: UIViewRepresentable {
           stack: me ? me.stack : 0,
           legal: (s.legal_actions || []).join('/'),
           myturn: !!(me && s.next_actor === me.player_id),
-          rule: s.rule || (s.ante ? 'short' : 'long'),
-          actionDeadline: s.action_deadline_unix_ms || 0
+          rule: s.rule || (s.ante ? 'short' : 'long')
         };
         try { window.webkit.messageHandlers.ai.postMessage(payload); } catch(e){}
       }
@@ -108,13 +142,20 @@ final class WeakScriptMessageHandler: NSObject, WKScriptMessageHandler {
 }
 
 extension WebGameView {
-    final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate {
+    final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate, WKUIDelegate {
         var store: AppStore
         weak var webView: WKWebView?
         private var lastKey = ""
         private var inFlight = false
 
         init(store: AppStore) { self.store = store }
+
+        func webView(_ webView: WKWebView,
+                     requestGeolocationPermissionFor origin: WKSecurityOrigin,
+                     initiatedByFrame frame: WKFrameInfo,
+                     decisionHandler: @escaping (WKPermissionDecision) -> Void) {
+            decisionHandler(.grant)
+        }
 
         func userContentController(_ uc: WKUserContentController, didReceive message: WKScriptMessage) {
             guard let dict = message.body as? [String: Any] else { return }
@@ -163,7 +204,7 @@ extension WebGameView {
 
         @MainActor
         private func js(_ code: String) async {
-            try? await webView?.evaluateJavaScript(code)
+            _ = try? await webView?.evaluateJavaScript(code)
         }
 
         private func jsString(_ s: String) -> String {
