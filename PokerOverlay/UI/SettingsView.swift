@@ -8,14 +8,7 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("服务器") {
-                    TextField("http://64.90.0.27:8099", text: $store.baseURL)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .keyboardType(.URL)
-                    SecureField("访问密码", text: $store.pin)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
+                Section("连接") {
                     Button {
                         Task { await test() }
                     } label: {
