@@ -68,7 +68,7 @@ struct OpponentsView: View {
                 metric("下/跟/过", "\(o.bets)/\(o.calls)/\(o.checks)")
             }
             if let last = o.last_seen {
-                Text("最后见到 \(last.suffix(8))")
+                Text("最后见到 \(o.lastSeenText)")
                     .font(.caption2).foregroundStyle(.secondary.opacity(0.7))
             }
         }

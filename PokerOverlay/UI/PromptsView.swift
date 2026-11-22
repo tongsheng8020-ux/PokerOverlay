@@ -58,7 +58,7 @@ struct PromptsView: View {
                     .font(.caption2)
                     .padding(.horizontal, 5).padding(.vertical, 1)
                     .background(Color.blue.opacity(0.18), in: Capsule())
-                Text((r.created_at).suffix(8))
+                Text(r.timeText)
                     .font(.caption2).foregroundStyle(.secondary)
             }
             if !r.reason.isEmpty {
