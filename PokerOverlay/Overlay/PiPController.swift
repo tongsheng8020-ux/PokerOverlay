@@ -3,10 +3,22 @@ import AVFoundation
 import UIKit
 import Combine
 
+extension Data {
+    mutating func append(u32 v: UInt32) {
+        var x = v.littleEndian
+        withUnsafeBytes(of: &x) { append(contentsOf: ) }
+    }
+    mutating func append(u16 v: UInt16) {
+        var x = v.littleEndian
+        withUnsafeBytes(of: &x) { append(contentsOf: ) }
+    }
+}
+
 /// 用系统画中画把决策浮在游戏上面。
 /// PiP 是 iOS 上唯一能在别的 App 上方常驻显示第三方内容的系统能力。
 final class PiPController: NSObject, ObservableObject {
     @Published var isActive = false
+    @Published var possible = false
     @Published var available = AVPictureInPictureController.isPictureInPictureSupported()
     @Published var lastError: String?
 
@@ -15,20 +27,26 @@ final class PiPController: NSObject, ObservableObject {
     private var pip: AVPictureInPictureController?
     private var timebase: CMTimebase?
     private var heartbeat: Timer?
+    private var retryTimer: Timer?
     private var decision: Decision?
     private var mode: String = "long"
-    private weak var hostView: UIView?
+    private var startWanted = false
+    private var attempt = 0
+    private var possibleObs: NSKeyValueObservation?
+    private var keepAlive: AVAudioPlayer?
 
     override init() {
         super.init()
         displayLayer.videoGravity = .resizeAspect
+        displayLayer.backgroundColor = UIColor.black.cgColor
+        displayLayer.frame = CGRect(x: 0, y: 0, width: 320, height: 180)
         configureAudio()
     }
 
     func configureAudio() {
         do {
             let s = AVAudioSession.sharedInstance()
-            try s.setCategory(.playback, mode: .moviePlayback, options: [])
+            try s.setCategory(.playback, mode: .moviePlayback, options: [.mixWithOthers])
             try s.setActive(true)
         } catch {
             print("audio session \(error)")
@@ -36,15 +54,21 @@ final class PiPController: NSObject, ObservableObject {
     }
 
     func attach(to view: UIView) {
-        hostView = view
         if displayLayer.superlayer !== view.layer {
-            displayLayer.frame = view.bounds
             view.layer.addSublayer(displayLayer)
-        } else {
-            displayLayer.frame = view.bounds
         }
+        updateLayerFrame(for: view)
         setupTimebaseIfNeeded()
         setupControllerIfNeeded()
+    }
+
+    private func updateLayerFrame(for view: UIView) {
+        let size = view.bounds.size
+        if size.width > 1 && size.height > 1 {
+            displayLayer.frame = CGRect(origin: .zero, size: size)
+        } else {
+            displayLayer.frame = CGRect(x: 0, y: 0, width: 320, height: 180)
+        }
     }
 
     private func setupTimebaseIfNeeded() {
@@ -68,6 +92,11 @@ final class PiPController: NSObject, ObservableObject {
         c.delegate = self
         c.canStartPictureInPictureAutomaticallyFromInline = true
         pip = c
+        possibleObs = c.observe(\.isPictureInPicturePossible, options: [.initial, .new]) { [weak self] controller, _ in
+            DispatchQueue.main.async {
+                self?.possible = controller.isPictureInPicturePossible
+            }
+        }
     }
 
     func update(_ d: Decision, mode: String = "long") {
@@ -83,21 +112,87 @@ final class PiPController: NSObject, ObservableObject {
             lastError = "此设备不支持画中画"
             return
         }
+        lastError = nil
+        startWanted = true
+        attempt = 0
         enqueueFrame()
         if pip.isPictureInPictureActive { return }
-        pip.startPictureInPicture()
-        startHeartbeat()
+        attemptStart()
+    }
+
+    private func attemptStart() {
+        guard startWanted, let pip else { return }
+        if pip.isPictureInPictureActive { return }
+        if pip.isPictureInPicturePossible {
+            pip.startPictureInPicture()
+            startKeepAlive()
+            startHeartbeat()
+            return
+        }
+        attempt += 1
+        if attempt > 12 {
+            lastError = "画中画无法启动：先在 App 前台点按钮，并确认 设置→通用→画中画→自动开启已打开"
+            startWanted = false
+            return
+        }
+        enqueueFrame()
+        retryTimer?.invalidate()
+        retryTimer = Timer.scheduledTimer(withTimeInterval: 0.3, repeats: false) { [weak self] _ in
+            self?.attemptStart()
+        }
     }
 
     func stop() {
-        pip?.stopPictureInPicture()
+        keepAlive?.stop()
+        keepAlive = nil
+        startWanted = false
+        retryTimer?.invalidate()
         heartbeat?.invalidate()
         heartbeat = nil
+        decision = nil
+        pip?.stopPictureInPicture()
+    }
+
+    private func startKeepAlive() {
+        guard keepAlive == nil, let url = silentWavURL() else { return }
+        do {
+            let p = try AVAudioPlayer(contentsOf: url)
+            p.numberOfLoops = -1
+            p.volume = 1.0
+            p.prepareToPlay()
+            p.play()
+            keepAlive = p
+        } catch {
+            print("keepalive \(error)")
+        }
+    }
+
+    private func silentWavURL() -> URL? {
+        let url = FileManager.default.temporaryDirectory.appendingPathComponent("poker_silence.wav")
+        if FileManager.default.fileExists(atPath: url.path) { return url }
+        var d = Data()
+        let rate: UInt32 = 8000, ch: UInt16 = 1, bits: UInt16 = 16
+        let byteRate = rate * UInt32(ch) * UInt32(bits / 8)
+        let dataSize = Int(rate) * Int(ch) * Int(bits / 8)
+        d.append(contentsOf: Array("RIFF".utf8))
+        d.append(u32: 36 + UInt32(dataSize))
+        d.append(contentsOf: Array("WAVEfmt ".utf8))
+        d.append(u32: 16); d.append(u16: 1); d.append(u16: ch)
+        d.append(u32: rate); d.append(u32: byteRate)
+        d.append(u16: UInt16(Int(ch) * Int(bits / 8))); d.append(u16: bits)
+        d.append(contentsOf: Array("data".utf8))
+        d.append(u32: UInt32(dataSize))
+        d.append(Data(count: dataSize))
+        do { try d.write(to: url) } catch {
+            print("wav \(error)")
+            return nil
+        }
+        return url
     }
 
     private func startHeartbeat() {
         heartbeat?.invalidate()
-        heartbeat = Timer.scheduledTimer(withTimeInterval: 1.5, repeats: true) { [weak self] _ in
+        heartbeat = Timer.scheduledTimer(withTimeInterval: 0.6, repeats: true) { [weak self] _ in
             self?.enqueueFrame()
         }
     }
@@ -165,7 +260,10 @@ final class PiPController: NSObject, ObservableObject {
 
 extension PiPController: AVPictureInPictureControllerDelegate {
     func pictureInPictureControllerDidStartPictureInPicture(_ controller: AVPictureInPictureController) {
-        DispatchQueue.main.async { self.isActive = true }
+        DispatchQueue.main.async {
+            self.isActive = true
+            self.startWanted = false
+        }
         startHeartbeat()
     }
 

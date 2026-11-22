@@ -22,6 +22,7 @@ final class AppStore: ObservableObject {
     @Published var serverOK: Bool?
     @Published var bridgeConnected = false
     @Published var pipActive = false
+    @Published var pipPossible = false
     @Published var pipError: String?
 
     let pip = PiPController()
@@ -47,6 +48,10 @@ final class AppStore: ObservableObject {
         pip.$isActive
             .receive(on: DispatchQueue.main)
             .sink { [weak self] v in Task { @MainActor in self?.pipActive = v } }
+            .store(in: &bag)
+        pip.$possible
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] v in Task { @MainActor in self?.pipPossible = v } }
             .store(in: &bag)
         pip.$lastError
             .receive(on: DispatchQueue.main)

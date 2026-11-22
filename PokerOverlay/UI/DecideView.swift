@@ -116,7 +116,7 @@ struct DecideView: View {
                 Text("游戏最前端浮窗")
                     .font(.subheadline.weight(.semibold))
                 Spacer()
-                Text(store.pipActive ? "已浮窗" : "未浮窗")
+                Text(store.pipActive ? "已浮窗" : (store.pipPossible ? "可启动" : "准备中"))
                     .font(.caption2)
                     .foregroundStyle(store.pipActive ? .green : .secondary)
             }
@@ -145,7 +145,7 @@ struct DecideView: View {
             if let err = store.pipError {
                 Text(err).font(.caption2).foregroundStyle(.orange)
             }
-            Text("浮窗后切回游戏，决策会跟着直播画面自动刷新。")
+            Text("点完按钮先别切 App，等小窗出现（首次约 1 秒）；没出现就看上面这行提示。")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
         }
