@@ -380,7 +380,16 @@ extension WebGameView {
         private var lastMyTurn = false
         private var inFlight = false
 
-        init(store: AppStore) { self.store = store }
+        init(store: AppStore) {
+            self.store = store
+            NotificationCenter.default.addObserver(
+                forName: UIApplication.didBecomeActiveNotification, object: nil, queue: .main
+            ) { [weak self] _ in
+                guard let self else { return }
+                DebugLog.shared.add("[APP] foreground, re-inject HUD")
+                self.webView?.evaluateJavaScript(Self.injectedJS)
+            }
+        }
 
         func webView(_ webView: WKWebView,
                      requestGeolocationPermissionFor origin: WKSecurityOrigin,
