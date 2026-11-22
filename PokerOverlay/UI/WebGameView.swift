@@ -269,6 +269,7 @@ struct WebGameView: UIViewRepresentable {
             hand: String(s.hand_id || '').slice(0, 8),
             mySeat: me ? me.seat : -1,
             account: me ? me.player_id : '',
+            accountName: (function(){try{var a=JSON.parse(localStorage.getItem('zzpk.acct')||'{}'));return a.username||a.name||a.account||a.nickname||'';}catch(e){return '';}})(),
             button: s.button_seat != null ? s.button_seat : -1,
             capacity: s.seats_capacity || 0,
             currentBet: s.current_bet || 0,
@@ -413,6 +414,7 @@ extension WebGameView {
             _ = d["rule"] as? String ?? "long"
             let mySeat = d["mySeat"] as? Int ?? -1
             let account = d["account"] as? String ?? ""
+            let accountName = d["accountName"] as? String ?? ""
 
             if myturn {
                 DebugLog.shared.add("[AI] state hand=\(hand) street=\(street) hole=\(hole) board=\(board) pot=\(pot) call=\(toCall)")
@@ -487,7 +489,7 @@ extension WebGameView {
                     mode: mode, raw: raw,
                     extra: ["hand_id": hand, "street": street, "opponents": opponents,
                             "actions": actions, "hole": hole, "board": board,
-                            "pot": pot, "to_call": toCall, "account": account, "stack": stack]
+                            "pot": pot, "to_call": toCall, "account": account, "account_name": accountName, "stack": stack]
                 )
                 DebugLog.shared.add("[AI] reply \(decision.action ?? "-") \(decision.latency)ms")
                 var act = (decision.action ?? "").uppercased()
