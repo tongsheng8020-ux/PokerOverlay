@@ -340,6 +340,7 @@ extension WebGameView {
                 return
             }
 
+            let legal = d["legal"] as? String ?? ""
             let key = "\(hand)|\(street)|\(pot)|\(toCall)"
             if key == lastKey || inFlight { return }
             lastKey = key
@@ -347,15 +348,24 @@ extension WebGameView {
             defer { inFlight = false }
 
             let mode = store.mode
-            let raw = "\(mode == "short" ? "S6" : "L6") 网页牌桌 \(hole) | \(board) | P:\(pot) C:\(toCall) | H:\(stack) | 他行动完轮到我"
+            let raw = "\(mode == "short" ? "S6" : "L6") 网页牌桌 \(hole) | \(board) | P:\(pot) C:\(toCall) | H:\(stack) | 合法动作:\(legal) | 他行动完轮到我"
             await js("window.zzAiUpdate('分析中…')")
             do {
                 DebugLog.shared.add("[AI] request mode=\(mode) raw=\(raw)")
                 let decision = try await store.api.decide(mode: mode, raw: raw)
                 DebugLog.shared.add("[AI] reply \(decision.action ?? "-") \(decision.latency)ms")
                 DebugLog.shared.add("[HUD] \(decision.action ?? "-") \(decision.size)")
+                var act = (decision.action ?? "").uppercased()
+                if toCall > 0 && (act == "CHECK" || act.isEmpty) {
+                    act = "CALL"
+                    DebugLog.shared.add("[FIX] illegal CHECK -> CALL (to_call=\(toCall))")
+                }
+                if toCall == 0 && act == "CALL" {
+                    act = "CHECK"
+                    DebugLog.shared.add("[FIX] illegal CALL -> CHECK (to_call=0)")
+                }
                 store.applyWeb(decision)
-                let text = "\(decision.action ?? "")\n\(decision.size)\n\(decision.reason)"
+                let text = "\(act)\n\(decision.size)\n\(decision.reason)"
                 await js("window.zzAiUpdate(\(jsString(text)))")
             } catch {
                 await js("window.zzAiUpdate(\(jsString("出错：\(error.localizedDescription)")))")
