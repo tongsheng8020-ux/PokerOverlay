@@ -318,7 +318,7 @@ struct WebGameView: UIViewRepresentable {
             hand: String(s.hand_id || '').slice(0, 8),
             mySeat: me ? me.seat : -1,
             account: me ? me.player_id : '',
-            accountName: (function(){try{var a=JSON.parse(localStorage.getItem('zzpk.acct')||'{}'));return a.username||a.name||a.account||a.nickname||'';}catch(e){return '';}})(),
+            accountName: (function(){try{var a=JSON.parse(localStorage.getItem('zzpk.acct')||'{}');return a.username||a.name||a.account||a.nickname||'';}catch(e){return '';}})(),
             button: s.button_seat != null ? s.button_seat : -1,
             capacity: s.seats_capacity || 0,
             currentBet: s.current_bet || 0,
