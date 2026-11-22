@@ -224,6 +224,7 @@ struct WebGameView: UIViewRepresentable {
             capacity: s.seats_capacity || 0,
             currentBet: s.current_bet || 0,
             minRaise: s.min_raise_to || 0,
+            active: (s.seats || []).filter(function(x){ return !x.folded; }).length,
             seats: (s.seats || []).map(function(x){
               return { seat: x.seat, stack: x.stack, folded: !!x.folded,
                        allin: !!x.all_in, contrib: x.total_contribution || 0,
@@ -370,6 +371,7 @@ extension WebGameView {
 
             let legal = d["legal"] as? String ?? ""
             let mySeat = d["mySeat"] as? Int ?? -1
+            let activePlayers = d["active"] as? Int ?? 0
             let button = d["button"] as? Int ?? -1
             let curBet = d["currentBet"] as? Int ?? 0
             let minRaise = d["minRaise"] as? Int ?? 0
@@ -403,7 +405,7 @@ extension WebGameView {
             defer { inFlight = false }
 
             let mode = store.mode
-            let raw = "\(mode == "short" ? "S6" : "L6") 网页牌桌 \(hole) | \(board) | P:\(dsp(pot)) C:\(dsp(toCall)) | H:\(dsp(stack)) | 按钮位:\(button) | 对手:\(oppText) | 当前注:\(dsp(curBet)) 最小加注到:\(dsp(minRaise)) | 计数单位:1 = \(unit) 筹码 | 合法动作:\(legal) | 注意：C>0 时不能 CHECK，只能 CALL/RAISE/FOLD；C=0 时不能 CALL | 所有尺寸都用上面这个显示单位 | 他行动完轮到我"
+            let raw = "\(mode == "short" ? "S6" : "L6") 网页牌桌 \(hole) | \(board) | P:\(dsp(pot)) C:\(dsp(toCall)) | H:\(dsp(stack)) | 活跃:\(activePlayers)人 | 按钮位:\(button) | 对手:\(oppText) | 当前注:\(dsp(curBet)) 最小加注到:\(dsp(minRaise)) | 计数单位:1 = \(unit) 筹码 | 合法动作:\(legal) | 注意：C>0 时不能 CHECK，只能 CALL/RAISE/FOLD；C=0 时不能 CALL | 所有尺寸都用上面这个显示单位 | 他行动完轮到我"
             await js("window.zzAiUpdate('分析中…')")
             do {
                 DebugLog.shared.add("[AI] request mode=\(mode) raw=\(raw)")
