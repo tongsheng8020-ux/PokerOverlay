@@ -8,12 +8,6 @@ struct RootView: View {
             WebGameView()
                 .tabItem { Label("牌桌", systemImage: "suit.club.fill") }
 
-            DecideView()
-                .tabItem { Label("决策", systemImage: "suit.spade.fill") }
-
-            StatsView()
-                .tabItem { Label("战绩", systemImage: "chart.line.uptrend.xyaxis") }
-
             SettingsView()
                 .tabItem { Label("设置", systemImage: "gearshape") }
 

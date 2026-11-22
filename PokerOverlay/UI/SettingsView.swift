@@ -30,6 +30,17 @@ struct SettingsView: View {
                     }
                 }
 
+                Section("牌局类型") {
+                    Picker("分析模式", selection: $store.mode) {
+                        Text("长牌 52").tag("long")
+                        Text("短牌 36").tag("short")
+                    }
+                    .pickerStyle(.segmented)
+                    Text("AI 按这里选的规则分析：长牌 52 张，短牌 36 张（三条>顺子、同花>葫芦）。")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+
                 Section("浮窗") {
                     Toggle("决策自动朗读", isOn: $store.autoSpeak)
                     Button {

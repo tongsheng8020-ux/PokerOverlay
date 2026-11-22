@@ -301,7 +301,7 @@ extension WebGameView {
             let stack = d["stack"] as? Int ?? 0
             let hand = d["hand"] as? String ?? ""
             let street = d["street"] as? String ?? ""
-            let rule = d["rule"] as? String ?? "long"
+            _ = d["rule"] as? String ?? "long"
 
             if myturn {
                 DebugLog.shared.add("[AI] state hand=\(hand) street=\(street) hole=\(hole) board=\(board) pot=\(pot) call=\(toCall)")
@@ -321,7 +321,7 @@ extension WebGameView {
             inFlight = true
             defer { inFlight = false }
 
-            let mode = (rule == "short") ? "short" : store.mode
+            let mode = store.mode
             let raw = "\(mode == "short" ? "S6" : "L6") 网页牌桌 \(hole) | \(board) | P:\(pot) C:\(toCall) | H:\(stack) | 他行动完轮到我"
             await js("window.zzAiUpdate('分析中…')")
             do {
