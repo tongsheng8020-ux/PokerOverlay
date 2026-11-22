@@ -60,6 +60,10 @@ struct PinGateView: View {
             .controlSize(.large)
             .padding(.horizontal, 40)
             .disabled(input.isEmpty || checking)
+            if !store.pin.isEmpty {
+                Button("取消") { store.showPinGate = false }
+                    .foregroundStyle(.secondary)
+            }
         }
         .padding()
         .presentationDetents([.medium])

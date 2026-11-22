@@ -59,6 +59,15 @@ struct SettingsView: View {
                         Text(store.keyRemaining)
                             .foregroundStyle(store.keyRemaining == "已过期" ? .red : .secondary)
                     }
+                    Button {
+                        store.showPinGate = true
+                    } label: {
+                        HStack {
+                            Text("更换卡密")
+                            Spacer()
+                            Image(systemName: "chevron.right").font(.caption).foregroundStyle(.secondary)
+                        }
+                    }
                 }
 
                 Section {
