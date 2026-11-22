@@ -160,6 +160,11 @@ final class AppStore: ObservableObject {
         if let b = d.billing { billing = b }
     }
 
+    func postHand(handId: String, account: String, first: Int, last: Int) async {
+        guard !pin.isEmpty else { return }
+        await api.postHandResult(handId: handId, account: account, first: first, last: last)
+    }
+
     func refreshBilling() async {
         if let b = try? await api.billing() { billing = b }
     }

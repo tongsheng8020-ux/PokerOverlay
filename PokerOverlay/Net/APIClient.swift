@@ -90,6 +90,11 @@ struct APIClient {
         return try await send(try request("/api/key/activate", method: "POST", body: body), as: KeyInfo.self)
     }
 
+    func postHandResult(handId: String, account: String, first: Int, last: Int) async {
+        let body: [String: Any] = ["hand_id": handId, "account": account, "first": first, "last": last]
+        _ = try? await send(try request("/api/hand_result", method: "POST", body: body), as: OkResp.self)
+    }
+
     func opponents(ids: [String] = []) async throws -> [Opponent] {
         var path = "/api/opponents/list?limit=200"
         if !ids.isEmpty {

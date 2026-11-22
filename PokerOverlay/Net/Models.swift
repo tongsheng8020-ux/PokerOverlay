@@ -47,6 +47,10 @@ struct Decision: Codable, Identifiable {
     }
 }
 
+struct OkResp: Codable {
+    var ok: Bool = true
+}
+
 struct KeyInfo: Codable {
     var ok: Bool = true
     var expires_at: String? = nil

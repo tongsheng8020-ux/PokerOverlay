@@ -352,10 +352,43 @@ struct WebGameViewRep: UIViewRepresentable {
         while (h.length > 10) h.shift();
       }
 
+      function reportHand(hs){
+        try {
+          if (!hs || hs.first == null || hs.last == null || hs.first === hs.last) return;
+          window.webkit.messageHandlers.ai.postMessage({ kind: 'hand', hand_id: hs.hand,
+            account: hs.account || '', first: hs.first, last: hs.last });
+        } catch(e){}
+      }
+      function trackStack(s){
+        try {
+          const vobj = (s.viewer && typeof s.viewer === 'object') ? s.viewer : null;
+          let vid = (typeof s.viewer === 'string' && s.viewer !== 'spectator') ? s.viewer : null;
+          let entry = null;
+          try { const m = JSON.parse(localStorage.getItem('zzpk.seats') || '{}'); entry = m[window.__rid]; } catch(e){}
+          if (!vid && entry && entry.player_id) vid = entry.player_id;
+          const fb = (entry && entry.seat != null) ? entry.seat : null;
+          const me = (s.seats || []).find(function(x){
+            if (vobj && vobj.seat != null && x.seat === vobj.seat) return true;
+            if (vid && x.player_id === vid) return true;
+            if (fb != null && x.seat === fb) return true;
+            return false;
+          });
+          if (!me || me.stack == null || !s.hand_id) return;
+          const h = String(s.hand_id);
+          if (!window.__hs || window.__hs.hand !== h) {
+            if (window.__hs && window.__hs.hand) reportHand(window.__hs);
+            window.__hs = { hand: h, account: me.player_id, first: me.stack, last: me.stack };
+          } else {
+            window.__hs.last = me.stack;
+            window.__hs.account = me.player_id;
+          }
+        } catch(e){}
+      }
       function poll(){
         const s = window.__s;
         if (!s) return;
         track(s);
+        trackStack(s);
         const vobj = (s.viewer && typeof s.viewer === 'object') ? s.viewer : null;
         let vid = (typeof s.viewer === 'string' && s.viewer !== 'spectator') ? s.viewer : null;
         const map = seatsMap();
@@ -566,6 +599,14 @@ extension WebGameViewRep {
             if message.name == logName {
                 let text = String(describing: message.body)
                 DispatchQueue.main.async { DebugLog.shared.add("[JS] \(text)") }
+                return
+            }
+            if let hd = message.body as? [String: Any], (hd["kind"] as? String) == "hand" {
+                let hid = hd["hand_id"] as? String ?? ""
+                let acc = hd["account"] as? String ?? ""
+                let f = hd["first"] as? Int ?? 0
+                let l = hd["last"] as? Int ?? 0
+                Task { await store.postHand(handId: hid, account: acc, first: f, last: l) }
                 return
             }
             guard let dict = message.body as? [String: Any] else { return }
