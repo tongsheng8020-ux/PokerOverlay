@@ -47,6 +47,12 @@ struct SettingsView: View {
                         Text(store.pin.isEmpty ? "未设置" : "已设置")
                             .foregroundStyle(.secondary)
                     }
+                    HStack {
+                        Text("剩余时间")
+                        Spacer()
+                        Text(store.keyRemaining)
+                            .foregroundStyle(store.keyRemaining == "已过期" ? .red : .secondary)
+                    }
                 }
 
                 Section {

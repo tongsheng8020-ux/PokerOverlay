@@ -22,6 +22,20 @@ final class AppStore: ObservableObject {
     @Published var serverOK: Bool?
     @Published var billing: Billing?
     @Published var keyExpires: String?
+
+    var keyRemaining: String {
+        guard let txt = keyExpires else { return "未知" }
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(identifier: "UTC")
+        guard let d = f.date(from: txt) else { return "未知" }
+        let sec = d.timeIntervalSinceNow
+        if sec <= 0 { return "已过期" }
+        let h = Int(sec) / 3600
+        let m = (Int(sec) % 3600) / 60
+        return h > 0 ? "\(h) 小时 \(m) 分" : "\(m) 分钟"
+    }
     @Published var currentPlayerIds: [String] = []
     @Published var bridgeConnected = false
     @Published var pipActive = false
