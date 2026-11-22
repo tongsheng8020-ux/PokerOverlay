@@ -1,7 +1,7 @@
 import SwiftUI
 import WebKit
 
-/// 直接打开 zzpk.vip 网页版，注入假定位 + AI HUD（可拖动/可收起/自己拉 snapshot）。
+/// 打开 zzpk.vip 网页版，注入假定位 + 轻量 HUD（不覆盖 fetch，靠 seat token 轮询）。
 struct WebGameView: UIViewRepresentable {
     @EnvironmentObject var store: AppStore
 
@@ -13,6 +13,7 @@ struct WebGameView: UIViewRepresentable {
         cfg.mediaTypesRequiringUserActionForPlayback = []
         let uc = WKUserContentController()
         uc.add(WeakScriptMessageHandler(context.coordinator), name: "ai")
+        uc.add(WeakScriptMessageHandler(context.coordinator), name: "log")
         uc.addUserScript(WKUserScript(source: Self.fakeLocationJS,
                                       injectionTime: .atDocumentStart,
                                       forMainFrameOnly: false))
@@ -33,24 +34,23 @@ struct WebGameView: UIViewRepresentable {
         context.coordinator.store = store
     }
 
-    /// 假定位：固定坐标（吉隆坡）。
     static let fakeLocationJS = """
     (function(){
-      if (window.__zzFakeGeo) return;
-      window.__zzFakeGeo = true;
+      if (window.__g) return;
+      window.__g = true;
       var LAT = 3.1390, LNG = 101.6869;
-      function makePos(){
+      function pos(){
         return { coords: { latitude: LAT, longitude: LNG, accuracy: 20,
-                           altitude: null, altitudeAccuracy: null, heading: null, speed: null },
+                 altitude: null, altitudeAccuracy: null, heading: null, speed: null },
                  timestamp: Date.now() };
       }
-      var geo = {
-        getCurrentPosition: function(ok, err, opt){ setTimeout(function(){ ok && ok(makePos()); }, 30); },
-        watchPosition: function(ok, err, opt){ setTimeout(function(){ ok && ok(makePos()); }, 30); return 1; },
+      var g = {
+        getCurrentPosition: function(ok){ setTimeout(function(){ ok && ok(pos()); }, 30); },
+        watchPosition: function(ok){ setTimeout(function(){ ok && ok(pos()); }, 30); return 1; },
         clearWatch: function(){}
       };
-      try { Object.defineProperty(navigator, 'geolocation', { value: geo, configurable: true }); }
-      catch(e) { navigator.geolocation.getCurrentPosition = geo.getCurrentPosition; }
+      try { Object.defineProperty(navigator, 'geolocation', { value: g, configurable: true }); }
+      catch(e) { navigator.geolocation.getCurrentPosition = g.getCurrentPosition; }
       if (navigator.permissions && navigator.permissions.query) {
         var q = navigator.permissions.query.bind(navigator.permissions);
         navigator.permissions.query = function(d){
@@ -66,59 +66,17 @@ struct WebGameView: UIViewRepresentable {
 
     static let injectedJS = """
     (function(){
-      if (window.__zzAiInstalled) return;
-      window.__zzAiInstalled = true;
-      window.__snap = null;
-      window.__roomId = null;
-
-      /* 1. 抓页面自己的 snapshot（fetch + XHR） */
-      const origFetch = window.fetch;
-      window.fetch = function(){
-        const args = arguments;
-        const u = String((args[0] && args[0].url) || args[0] || '');
-        const m = u.match(/\\/v1\\/rooms\\/([0-9a-f]+)\\/snapshot/);
-        if (m) window.__roomId = m[1];
-        return origFetch.apply(this, args).then(function(r){
-          try {
-            if (m) { r.clone().json().then(function(j){ adopt(j); }).catch(function(){}); }
-          } catch(e){}
-          return r;
-        });
+      if (window.__h) return;
+      window.__h = true;
+      window.__s = null;
+      window.__log = function(m){
+        try { window.webkit.messageHandlers.log.postMessage(String(m)); } catch(e){}
       };
-      const origOpen = XMLHttpRequest.prototype.open;
-      XMLHttpRequest.prototype.open = function(method, url){
-        const u = String(url || '');
-        const m = u.match(/\\/v1\\/rooms\\/([0-9a-f]+)\\/snapshot/);
-        if (m) {
-          window.__roomId = m[1];
-          this.addEventListener('load', function(){
-            try { adopt(JSON.parse(this.responseText)); } catch(e){}
-          });
-        }
-        return origOpen.apply(this, arguments);
-      };
+      window.__log('js injected');
+      window.__rid = null;
 
-      /* 2. 自己定时拉 snapshot */
-      function token(){
+      function acctTok(){
         try { return JSON.parse(localStorage.getItem('zzpk.acct')).token; } catch(e){ return null; }
-      }
-      function findRoomFromPerf(){
-        try {
-          const names = performance.getEntriesByType('resource').map(function(e){ return e.name; });
-          for (let i = names.length - 1; i >= 0; i--) {
-            const m = names[i].match(/\\/v1\\/rooms\\/([0-9a-f]+)\\//);
-            if (m) return m[1];
-          }
-        } catch(e){}
-        return null;
-      }
-      function adopt(j){
-        if (!j) return;
-        if (!j.viewer && window.__snap && window.__snap.viewer) {
-          j.viewer = window.__snap.viewer;
-        }
-        window.__snap = j;
-        poll();
       }
       function seatTok(rid){
         try {
@@ -129,57 +87,45 @@ struct WebGameView: UIViewRepresentable {
           return v.token || v.t || v.seatTok || null;
         } catch(e){ return null; }
       }
-      async function pull(){
-        if (!window.__roomId) window.__roomId = findRoomFromPerf();
-        const rid = window.__roomId, acct = token();
-        const st = seatTok(rid);
-        const tk = st || acct;
-        if (!rid || !tk) return;
+      function findRoom(){
+        if (window.__rid) return window.__rid;
         try {
-          const h = { 'Authorization': 'Bearer ' + tk };
-          if (acct) h['X-Account-Session'] = acct;
-          const r = await origFetch('/v1/rooms/' + rid + '/snapshot', { headers: h });
-          if (r.ok) { adopt(await r.json()); }
+          const names = performance.getEntriesByType('resource').map(function(e){ return e.name; });
+          for (let i = names.length - 1; i >= 0; i--) {
+            const m = names[i].match(/\\/v1\\/rooms\\/([0-9a-f]+)\\//);
+            if (m) { window.__rid = m[1]; return m[1]; }
+          }
         } catch(e){}
+        return null;
       }
-      setInterval(pull, 1200);
 
-      /* 3. HUD */
       const box = document.createElement('div');
-      box.id = 'zz-ai-hud';
-      box.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);left:8px;right:8px;'
-        + 'z-index:2147483647;background:rgba(8,12,18,.93);border:1px solid rgba(88,166,255,.55);'
-        + 'border-radius:12px;padding:6px 10px;color:#e9eef6;'
-        + 'font:12.5px/1.45 -apple-system,PingFang SC,sans-serif;'
-        + 'box-shadow:0 8px 24px rgba(0,0,0,.5);display:none;max-height:64px;overflow:hidden;'
-        + 'transition:max-height .18s ease;touch-action:none;user-select:none;';
-      box.innerHTML = '<div style="display:flex;align-items:center;gap:8px">'
-        + '<span style="color:#58a6ff;font-weight:700;font-size:11px;flex:1">AI 助手 · 可拖动 / 点我展开</span>'
-        + '<span id="zz-ai-x" style="padding:0 8px;border:1px solid rgba(255,255,255,.25);'
-        + 'border-radius:999px;font-size:11px;line-height:20px">收</span></div>'
-        + '<div id="zz-ai-act" style="white-space:pre-wrap;max-height:44px;overflow:hidden;margin-top:2px">'
-        + '等待牌局…</div>'
-        + '<div id="zz-ai-dbg" style="color:#5b6b80;font-size:10px;margin-top:2px"></div>';
+      box.id = 'p-hud';
+      box.style.cssText = 'position:fixed;left:8px;right:8px;top:2px;z-index:2147483646;'
+        + 'background:rgba(6,10,16,.90);border:1px solid rgba(88,166,255,.45);'
+        + 'border-radius:10px;padding:4px 8px;color:#e9eef6;'
+        + 'font:12px/1.35 -apple-system,PingFang SC,sans-serif;box-shadow:0 6px 18px rgba(0,0,0,.45);'
+        + 'display:none;max-height:56px;overflow:hidden;touch-action:none;user-select:none;';
+      box.innerHTML = '<div style="display:flex;gap:6px;align-items:center">'
+        + '<span style="color:#58a6ff;font-weight:700;font-size:10px">提示</span>'
+        + '<span id="p-act" style="flex:1;white-space:pre-wrap;max-height:34px;overflow:hidden"></span>'
+        + '<span id="p-x" style="font-size:10px;border:1px solid rgba(255,255,255,.22);'
+        + 'border-radius:99px;padding:0 6px;line-height:16px">收</span></div>'
+        + '<div id="p-dbg" style="color:#5b6b80;font-size:9px"></div>';
 
-      let expanded = false;
-      function stop(e){ e.stopPropagation(); e.preventDefault(); }
-      ['touchstart','touchend','touchmove','pointerdown','pointerup','click'].forEach(function(t){
-        box.addEventListener(t, stop, true);
-      });
+      function stop(e){ e.stopPropagation(); }
+      ['pointerdown','touchstart','click'].forEach(function(t){ box.addEventListener(t, stop, true); });
       box.addEventListener('click', function(){
-        expanded = !expanded;
-        box.style.maxHeight = expanded ? '300px' : '64px';
-        const a = document.getElementById('zz-ai-act');
-        if (a) a.style.maxHeight = expanded ? '240px' : '44px';
+        box.style.maxHeight = box.style.maxHeight === '200px' ? '56px' : '200px';
+        const a = document.getElementById('p-act');
+        if (a) a.style.maxHeight = a.style.maxHeight === '180px' ? '34px' : '180px';
       });
-      const closeBtn = box.querySelector('#zz-ai-x');
-      closeBtn.addEventListener('click', function(){ box.style.display = 'none'; window.__zzHidden = true; });
-      closeBtn.addEventListener('touchstart', function(){ box.style.display = 'none'; window.__zzHidden = true; });
+      const x = box.querySelector('#p-x');
+      x.addEventListener('click', function(){ box.style.display = 'none'; window.__hidden = true; });
 
       let drag = null;
       box.addEventListener('touchstart', function(e){
-        const t = e.touches[0];
-        drag = { x: t.clientX, y: t.clientY, top: box.offsetTop, left: box.offsetLeft };
+        const t = e.touches[0]; drag = { x: t.clientX, y: t.clientY, top: box.offsetTop, left: box.offsetLeft };
       }, true);
       box.addEventListener('touchmove', function(e){
         if (!drag) return;
@@ -191,54 +137,74 @@ struct WebGameView: UIViewRepresentable {
       box.addEventListener('touchend', function(){ drag = null; }, true);
 
       const mount = function(){
-        if (document.body && !document.getElementById('zz-ai-hud') && !window.__zzHidden) {
-          document.body.appendChild(box);
-        }
+        const root = document.documentElement || document.body;
+        if (root && !document.getElementById('p-hud') && !window.__hidden) root.appendChild(box);
       };
-      setInterval(mount, 800);
+      let mountLogged = false;
+      setInterval(function(){ mount(); if (mountLogged === false && document.getElementById('p-hud')) { mountLogged = true; window.__log('hud mounted'); } }, 800);
       mount();
 
       window.zzAiUpdate = function(text){
-        const el = document.getElementById('zz-ai-act');
+        const el = document.getElementById('p-act');
         if (el) el.textContent = text;
         box.style.display = 'block';
       };
-      window.zzAiHide = function(){ box.style.display = 'none'; };
 
       let lastSig = '';
-      window.__zzMyTurn = false;
-      window.__zzSeated = false;
+      window.__my = false;
 
       function poll(){
-        const s = window.__snap;
+        const s = window.__s;
         if (!s) return;
         const me = (s.viewer && s.viewer.seat != null)
           ? (s.seats || []).find(function(x){ return x.seat === s.viewer.seat; })
           : null;
-        window.__zzSeated = !!me;
-        window.__zzMyTurn = !!(me && s.next_actor === me.player_id);
-        const dbg = document.getElementById('zz-ai-dbg');
-        if (dbg) dbg.textContent = 'snap✓ viewer' + (s.viewer ? '有' : '无') + ' 座位' + (me ? me.seat : '-') + ' 手牌' +
-          (me && me.cards ? me.cards.length : 0) + ' 轮到我' + (window.__zzMyTurn ? '是' : '否');
+        window.__my = !!(me && s.next_actor === me.player_id);
+        if (window.__my !== window.__lastMy) {
+          window.__lastMy = window.__my;
+          window.__log('turn my=' + (window.__my ? 1 : 0) + ' cards=' + (me && me.cards ? me.cards.join('') : '-'));
+        }
+        const dbg = document.getElementById('p-dbg');
+        if (dbg) dbg.textContent = 'v' + (s.viewer ? 1 : 0) + ' 座' + (me ? me.seat : '-')
+          + ' 牌' + (me && me.cards ? me.cards.length : 0) + ' 我' + (window.__my ? 1 : 0);
         const sig = [s.hand_id, s.street, s.to_call, s.pot, (s.board||[]).join(''),
                      me ? (me.cards||[]).join('') : ''].join('|');
         if (sig === lastSig) return;
         lastSig = sig;
-        const payload = {
-          hand: String(s.hand_id || '').slice(0, 8),
-          street: s.street || '',
-          pot: s.pot || 0,
-          to_call: s.to_call || 0,
-          board: (s.board || []).join(' '),
-          hole: me ? (me.cards || []).join(' ') : '',
-          stack: me ? me.stack : 0,
-          legal: (s.legal_actions || []).join('/'),
-          myturn: window.__zzMyTurn,
-          rule: s.rule || (s.ante ? 'short' : 'long')
-        };
-        try { window.webkit.messageHandlers.ai.postMessage(payload); } catch(e){}
+        try {
+          window.webkit.messageHandlers.ai.postMessage({
+            hand: String(s.hand_id || '').slice(0, 8),
+            street: s.street || '', pot: s.pot || 0, to_call: s.to_call || 0,
+            board: (s.board || []).join(' '),
+            hole: me ? (me.cards || []).join(' ') : '',
+            stack: me ? me.stack : 0,
+            legal: (s.legal_actions || []).join('/'),
+            myturn: window.__my,
+            rule: s.rule || (s.ante ? 'short' : 'long')
+          });
+        } catch(e){}
       }
-      setInterval(poll, 900);
+
+      async function pull(){
+        const rid = findRoom();
+        const acct = acctTok();
+        if (!rid || !acct) { window.__log('pull skip rid=' + rid + ' acct=' + (acct ? 1 : 0)); return; }
+        const st = seatTok(rid);
+        const tk = st || acct;
+        try {
+          const h = { 'Authorization': 'Bearer ' + tk };
+          if (acct) h['X-Account-Session'] = acct;
+          const r = await fetch('/v1/rooms/' + rid + '/snapshot', { headers: h });
+          if (!r.ok) return;
+          const j = await r.json();
+          if (!j.viewer && window.__s && window.__s.viewer) j.viewer = window.__s.viewer;
+          window.__s = j;
+          window.__log('snap viewer=' + (j.viewer ? 1 : 0) + ' seat=' + (j.viewer && j.viewer.seat != null ? j.viewer.seat : '-') + ' seats=' + (j.seats ? j.seats.length : 0));
+          poll();
+        } catch(e){}
+      }
+      setInterval(pull, 1500);
+      setTimeout(pull, 600);
     })();
     """
 }
@@ -268,6 +234,11 @@ extension WebGameView {
         }
 
         func userContentController(_ uc: WKUserContentController, didReceive message: WKScriptMessage) {
+            if message.name == "log" {
+                let text = String(describing: message.body)
+                DispatchQueue.main.async { DebugLog.shared.add("[JS] \(text)") }
+                return
+            }
             guard let dict = message.body as? [String: Any] else { return }
             Task { @MainActor in await handle(dict) }
         }
@@ -284,12 +255,13 @@ extension WebGameView {
             let street = d["street"] as? String ?? ""
             let rule = d["rule"] as? String ?? "long"
 
+            DebugLog.shared.add("[AI] state hand=\(hand) street=\(street) hole=\(hole) board=\(board) pot=\(pot) call=\(toCall) my=\(myturn ? 1 : 0)")
             guard myturn else {
-                await js("window.zzAiUpdate('轮到对手 / 等待行动')")
+                await js("window.zzAiUpdate('等待行动')")
                 return
             }
             guard !hole.isEmpty else {
-                await js("window.zzAiUpdate('先入座再开助手（现在看不到你的牌）')")
+                await js("window.zzAiUpdate('入座后才有牌')")
                 return
             }
 
@@ -303,7 +275,9 @@ extension WebGameView {
             let raw = "\(mode == "short" ? "S6" : "L6") 网页牌桌 \(hole) | \(board) | P:\(pot) C:\(toCall) | H:\(stack) | 他行动完轮到我"
             await js("window.zzAiUpdate('分析中…')")
             do {
+                DebugLog.shared.add("[AI] request mode=\(mode) raw=\(raw)")
                 let decision = try await store.api.decide(mode: mode, raw: raw)
+                DebugLog.shared.add("[AI] reply \(decision.action ?? "-") \(decision.latency)ms")
                 store.applyWeb(decision)
                 let text = "\(decision.action ?? "")\n\(decision.size)\n\(decision.reason)"
                 await js("window.zzAiUpdate(\(jsString(text)))")
