@@ -86,9 +86,25 @@ struct WebGameView: UIViewRepresentable {
         DebugLog.shared.add("[JS] reinject start")
         let js = prepareJS(ai: ai, log: log)
         webView.evaluateJavaScript("window.__h=false; window.__s=null;", in: nil, in: hudWorld) { _ in
-            webView.evaluateJavaScript(js, in: nil, in: hudWorld) { result in
+            let wrapped = """
+            (function(){
+              try {
+            \(js)
+              } catch(e) {
+                try { window.webkit.messageHandlers.\(log).postMessage('jsfatal ' + (e && e.message) + ' | ' + (e && e.stack)); } catch(_) {}
+              }
+            })();
+            """
+            webView.evaluateJavaScript(wrapped, in: nil, in: hudWorld) { result in
                 if case .failure(let err) = result {
                     DebugLog.shared.add("[JS] inject err \(err.localizedDescription)")
+                    webView.evaluateJavaScript(js, in: nil, in: nil) { r2 in
+                        if case .failure(let e2) = r2 {
+                            DebugLog.shared.add("[JS] page fallback err \(e2.localizedDescription)")
+                        } else {
+                            DebugLog.shared.add("[JS] page fallback ok")
+                        }
+                    }
                 } else {
                     DebugLog.shared.add("[JS] inject ok")
                 }
