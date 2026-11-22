@@ -486,9 +486,15 @@ extension WebGameView {
                     act = "CHECK"
                     DebugLog.shared.add("[FIX] illegal CALL -> CHECK (to_call=0)")
                 }
+                var sizeText = decision.size
+                if act == "CALL" {
+                    sizeText = dsp(toCall)
+                } else if act == "CHECK" || act == "FOLD" {
+                    sizeText = "—"
+                }
                 var fixed = decision
                 fixed.action = act
-                fixed.text = "\(act)\n\(decision.size)\n\(decision.reason)"
+                fixed.text = "\(act)\n\(sizeText)\n\(decision.reason)"
                 store.applyWeb(fixed)
                 DebugLog.shared.add("[HUD] \(act) \(decision.size)")
                 await js("window.zzAiUpdate(\(jsString(fixed.text)))")
