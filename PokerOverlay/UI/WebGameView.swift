@@ -606,7 +606,9 @@ extension WebGameViewRep {
                 let acc = hd["account"] as? String ?? ""
                 let f = hd["first"] as? Int ?? 0
                 let l = hd["last"] as? Int ?? 0
-                Task { await store.postHand(handId: hid, account: acc, first: f, last: l) }
+                Task { @MainActor [weak self] in
+                    await self?.store.postHand(handId: hid, account: acc, first: f, last: l)
+                }
                 return
             }
             guard let dict = message.body as? [String: Any] else { return }
