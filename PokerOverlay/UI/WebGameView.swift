@@ -190,6 +190,13 @@ struct WebGameView: UIViewRepresentable {
         return ({pre:'翻前', flop:'翻牌', turn:'转牌', river:'河牌'})[x] || x || '';
       }
       function track(s){
+          if (!window.__seatLogged && (s.seats || []).length) {
+            window.__seatLogged = true;
+            const x = s.seats[0] || {};
+            log('seatKeys ' + JSON.stringify(Object.keys(x)) + ' nameFields ' +
+                JSON.stringify({name: x.name, nick: x.nick, nickname: x.nickname,
+                                display_name: x.display_name, player_name: x.player_name}));
+          }
         const p = window.__prevSnap;
         window.__prevSnap = s;
         if (!p) return;
