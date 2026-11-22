@@ -23,6 +23,7 @@ final class AppStore: ObservableObject {
     @Published var bridgeConnected = false
     @Published var pipActive = false
     @Published var pipPossible = false
+    @Published var pipLastFrame: Date?
     @Published var pipError: String?
 
     let pip = PiPController()
@@ -52,6 +53,10 @@ final class AppStore: ObservableObject {
         pip.$possible
             .receive(on: DispatchQueue.main)
             .sink { [weak self] v in Task { @MainActor in self?.pipPossible = v } }
+            .store(in: &bag)
+        pip.$lastFrameAt
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] v in Task { @MainActor in self?.pipLastFrame = v } }
             .store(in: &bag)
         pip.$lastError
             .receive(on: DispatchQueue.main)

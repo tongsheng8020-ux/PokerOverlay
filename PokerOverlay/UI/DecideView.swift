@@ -110,6 +110,12 @@ struct DecideView: View {
         .disabled(store.loading)
     }
 
+    private var frameStatus: String {
+        guard let t = store.pipLastFrame else { return "还没推帧" }
+        let s = Int(Date().timeIntervalSince(t))
+        return s <= 1 ? "帧已推送 · \(s)s 前" : "推帧延迟 \(s)s"
+    }
+
     private var overlayPanel: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
@@ -144,6 +150,9 @@ struct DecideView: View {
             .controlSize(.regular)
             if let err = store.pipError {
                 Text(err).font(.caption2).foregroundStyle(.orange)
+            }
+            if store.pipActive {
+                Text(frameStatus).font(.caption2).foregroundStyle(.secondary)
             }
             Text("点完按钮先别切 App，等小窗出现（首次约 1 秒）；没出现就看上面这行提示。")
                 .font(.caption2)

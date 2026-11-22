@@ -10,6 +10,7 @@ final class PiPController: NSObject, ObservableObject {
     @Published var possible = false
     @Published var available = AVPictureInPictureController.isPictureInPictureSupported()
     @Published var lastError: String?
+    @Published var lastFrameAt: Date?
 
     let displayLayer = AVSampleBufferDisplayLayer()
 
@@ -67,7 +68,7 @@ final class PiPController: NSObject, ObservableObject {
                                         sourceClock: CMClockGetHostTimeClock(),
                                         timebaseOut: &tb)
         guard let tb else { return }
-        CMTimebaseSetTime(tb, time: .zero)
+        CMTimebaseSetTime(tb, time: CMClockGetTime(CMClockGetHostTimeClock()))
         CMTimebaseSetRate(tb, rate: 1)
         displayLayer.controlTimebase = tb
         timebase = tb
@@ -213,7 +214,7 @@ final class PiPController: NSObject, ObservableObject {
         guard let fmt else { return }
         var timing = CMSampleTimingInfo(
             duration: CMTime(value: 1, timescale: 30),
-            presentationTimeStamp: CMClockGetTime(CMClockGetHostTimeClock()),
+            presentationTimeStamp: currentTime(),
             decodeTimeStamp: .invalid
         )
         var sample: CMSampleBuffer?
@@ -227,9 +228,15 @@ final class PiPController: NSObject, ObservableObject {
                         key: kCMSampleAttachmentKey_DisplayImmediately,
                         value: kCFBooleanTrue,
                         attachmentMode: kCMAttachmentMode_ShouldPropagate)
-        if displayLayer.isReadyForMoreMediaData {
-            displayLayer.enqueue(sample)
+        displayLayer.enqueue(sample)
+        lastFrameAt = Date()
+    }
+
+    private func currentTime() -> CMTime {
+        if let tb = timebase {
+            return CMTimebaseGetTime(tb)
         }
+        return CMClockGetTime(CMClockGetHostTimeClock())
     }
 
     private func pixelBuffer(from image: UIImage) -> CVPixelBuffer? {
