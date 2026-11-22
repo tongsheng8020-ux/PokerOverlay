@@ -20,6 +20,7 @@ final class AppStore: ObservableObject {
     @Published var liveText = ""
     @Published var showPinGate = false
     @Published var serverOK: Bool?
+    @Published var billing: Billing?
     @Published var bridgeConnected = false
     @Published var pipActive = false
     @Published var pipPossible = false
@@ -113,7 +114,12 @@ final class AppStore: ObservableObject {
 
     func applyWeb(_ d: Decision) {
         decision = d
+        if let b = d.billing { billing = b }
         pip.update(d, mode: mode)
+    }
+
+    func refreshBilling() async {
+        if let b = try? await api.billing() { billing = b }
     }
 
     private func apply(_ d: Decision) {
@@ -146,6 +152,7 @@ final class AppStore: ObservableObject {
             overview = try await ov
             hands = try await hs.rows
             daily = try await dl
+            if let b = try? await api.billing() { billing = b }
             serverOK = true
         } catch {
             errorText = error.localizedDescription

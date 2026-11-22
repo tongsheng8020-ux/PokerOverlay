@@ -8,9 +8,11 @@ struct Decision: Codable, Identifiable {
     var latency_ms: Int? = nil
     var model: String? = nil
     var source: String? = nil
+    var cost: Double? = nil
+    var billing: Billing? = nil
 
     enum CodingKeys: String, CodingKey {
-        case ok, text, action, latency_ms, model, source
+        case ok, text, action, latency_ms, model, source, cost, billing
     }
 
     var latency: Int { latency_ms ?? 0 }
@@ -36,6 +38,14 @@ struct Decision: Codable, Identifiable {
         }
         return ""
     }
+}
+
+struct Billing: Codable {
+    var balance: Double = 0
+    var spent: Double = 0
+    var calls: Int = 0
+    var tokens: Int = 0
+    var updated_at: String? = nil
 }
 
 struct Overview: Codable {

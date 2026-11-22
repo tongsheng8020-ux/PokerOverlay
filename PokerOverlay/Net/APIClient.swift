@@ -64,6 +64,10 @@ struct APIClient {
         return try await send(try request("/api/vision", method: "POST", body: body), as: Decision.self)
     }
 
+    func billing() async throws -> Billing {
+        try await send(try request("/api/billing"), as: Billing.self)
+    }
+
     func overview() async throws -> Overview {
         try await send(try request("/api/stats/overview"), as: Overview.self)
     }
