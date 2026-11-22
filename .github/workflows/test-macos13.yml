@@ -1,0 +1,8 @@
+﻿name: test-macos13
+on:
+  workflow_dispatch:
+jobs:
+  t:
+    runs-on: macos-13
+    steps:
+      - run: echo hi && sw_vers
