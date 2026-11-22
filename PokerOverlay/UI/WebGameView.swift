@@ -219,6 +219,16 @@ struct WebGameView: UIViewRepresentable {
           window.webkit.messageHandlers.ai.postMessage({
             room: String(window.__room || '').slice(0, 8),
             hand: String(s.hand_id || '').slice(0, 8),
+            mySeat: me ? me.seat : -1,
+            button: s.button_seat != null ? s.button_seat : -1,
+            capacity: s.seats_capacity || 0,
+            currentBet: s.current_bet || 0,
+            minRaise: s.min_raise_to || 0,
+            seats: (s.seats || []).map(function(x){
+              return { seat: x.seat, stack: x.stack, folded: !!x.folded,
+                       allin: !!x.all_in, contrib: x.total_contribution || 0,
+                       shown: x.hand_shown ? (x.hole || []) : [] };
+            }),
             street: s.street || '', pot: s.pot || 0, to_call: s.to_call || 0,
             board: (s.board || []).join(' '),
             hole: me ? (me.hole || []).join(' ') : '',
@@ -359,6 +369,27 @@ extension WebGameView {
             }
 
             let legal = d["legal"] as? String ?? ""
+            let mySeat = d["mySeat"] as? Int ?? -1
+            let button = d["button"] as? Int ?? -1
+            let curBet = d["currentBet"] as? Int ?? 0
+            let minRaise = d["minRaise"] as? Int ?? 0
+            var oppParts: [String] = []
+            if let seats = d["seats"] as? [[String: Any]] {
+                for x in seats {
+                    let seat = x["seat"] as? Int ?? -1
+                    if seat == mySeat { continue }
+                    let stk = x["stack"] as? Int ?? 0
+                    let folded = (x["folded"] as? Bool ?? false) ? "弃" : "在"
+                    let allin = (x["allin"] as? Bool ?? false) ? "全下" : ""
+                    let contrib = x["contrib"] as? Int ?? 0
+                    let shown = (x["shown"] as? [String]) ?? []
+                    var part = "座\(seat) \(folded)\(allin) 筹码\(stk) 投\(contrib)"
+                    if !shown.isEmpty { part += " 亮牌\(shown.joined(separator: ""))" }
+                    oppParts.append(part)
+                    if oppParts.count >= 8 { break }
+                }
+            }
+            let oppText = oppParts.isEmpty ? "无" : oppParts.joined(separator: "；")
             let unit = max(1, d["unit"] as? Int ?? 1)
             let u = Double(unit)
             func dsp(_ v: Int) -> String {
@@ -372,7 +403,7 @@ extension WebGameView {
             defer { inFlight = false }
 
             let mode = store.mode
-            let raw = "\(mode == "short" ? "S6" : "L6") 网页牌桌 \(hole) | \(board) | P:\(dsp(pot)) C:\(dsp(toCall)) | H:\(dsp(stack)) | 计数单位:1 = \(unit) 筹码 | 合法动作:\(legal) | 注意：C>0 时不能 CHECK，只能 CALL/RAISE/FOLD；C=0 时不能 CALL | 所有尺寸都用上面这个显示单位 | 他行动完轮到我"
+            let raw = "\(mode == "short" ? "S6" : "L6") 网页牌桌 \(hole) | \(board) | P:\(dsp(pot)) C:\(dsp(toCall)) | H:\(dsp(stack)) | 按钮位:\(button) | 对手:\(oppText) | 当前注:\(dsp(curBet)) 最小加注到:\(dsp(minRaise)) | 计数单位:1 = \(unit) 筹码 | 合法动作:\(legal) | 注意：C>0 时不能 CHECK，只能 CALL/RAISE/FOLD；C=0 时不能 CALL | 所有尺寸都用上面这个显示单位 | 他行动完轮到我"
             await js("window.zzAiUpdate('分析中…')")
             do {
                 DebugLog.shared.add("[AI] request mode=\(mode) raw=\(raw)")
