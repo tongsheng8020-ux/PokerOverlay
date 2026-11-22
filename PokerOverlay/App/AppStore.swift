@@ -70,7 +70,6 @@ final class AppStore: ObservableObject {
     var api: APIClient { APIClient(base: baseURL, pin: pin) }
 
     func boot() {
-        bridge.start()
         Task { await ping(); await refreshAll() }
     }
 
@@ -115,7 +114,6 @@ final class AppStore: ObservableObject {
     func applyWeb(_ d: Decision) {
         decision = d
         if let b = d.billing { billing = b }
-        pip.update(d, mode: mode)
     }
 
     func refreshBilling() async {
@@ -146,12 +144,6 @@ final class AppStore: ObservableObject {
     func refreshAll() async {
         if pin.isEmpty { return }
         do {
-            async let ov = api.overview()
-            async let hs = api.hands(limit: 20)
-            async let dl = api.daily()
-            overview = try await ov
-            hands = try await hs.rows
-            daily = try await dl
             if let b = try? await api.billing() { billing = b }
             serverOK = true
         } catch {
