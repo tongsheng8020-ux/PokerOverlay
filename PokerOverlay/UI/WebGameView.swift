@@ -11,7 +11,6 @@ struct WebGameView: View {
     var body: some View {
         ZStack(alignment: .top) {
             WebGameViewRep()
-                .ignoresSafeArea(edges: .top)
             if showNativeHUD, let d = store.decision {
                 NativeHUD(decision: d)
                     .padding(.horizontal, 8)
