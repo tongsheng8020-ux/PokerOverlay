@@ -20,6 +20,10 @@ struct WebGameView: UIViewRepresentable {
                                       forMainFrameOnly: false))
         cfg.userContentController = uc
         let wv = WKWebView(frame: .zero, configuration: cfg)
+        let osv = UIDevice.current.systemVersion.replacingOccurrences(of: ".", with: "_")
+        let major = UIDevice.current.systemVersion.split(separator: ".").first.map(String.init) ?? "17"
+        wv.customUserAgent = "Mozilla/5.0 (iPhone; CPU iPhone OS \(osv) like Mac OS X) "
+            + "AppleWebKit/605.1.15 (KHTML, like Gecko) Version/\(major).0 Mobile/15E148 Safari/604.1"
         wv.navigationDelegate = context.coordinator
         wv.uiDelegate = context.coordinator
         wv.scrollView.contentInsetAdjustmentBehavior = .never
