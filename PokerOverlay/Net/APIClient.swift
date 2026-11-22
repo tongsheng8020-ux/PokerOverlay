@@ -69,6 +69,18 @@ struct APIClient {
         return try await send(try request("/api/vision", method: "POST", body: body), as: Decision.self)
     }
 
+    func uploadLogs(_ lines: [String]) async -> Bool {
+        guard !lines.isEmpty else { return true }
+        let body: [String: Any] = ["device": "ios", "entries": Array(lines.suffix(200))]
+        do {
+            let req = try request("/api/log", method: "POST", body: body)
+            let (_, resp) = try await URLSession.shared.data(for: req)
+            return (resp as? HTTPURLResponse)?.statusCode == 200
+        } catch {
+            return false
+        }
+    }
+
     func opponents() async throws -> [Opponent] {
         try await send(try request("/api/opponents/list?limit=200"), as: [Opponent].self)
     }

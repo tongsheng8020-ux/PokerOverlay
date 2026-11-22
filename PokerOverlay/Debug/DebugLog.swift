@@ -36,8 +36,20 @@ final class DebugLog: ObservableObject {
         }
     }
 
+    private var uploaded = 0
+
+    func pendingEntries() -> [String] {
+        if uploaded > entries.count { uploaded = entries.count }
+        return Array(entries[uploaded...])
+    }
+
+    func markUploaded(_ n: Int) {
+        uploaded = min(entries.count, uploaded + n)
+    }
+
     func clear() {
         entries.removeAll()
+        uploaded = 0
         try? "".write(to: fileURL, atomically: true, encoding: .utf8)
     }
 

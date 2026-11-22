@@ -70,7 +70,29 @@ final class AppStore: ObservableObject {
     var api: APIClient { APIClient(base: baseURL, pin: pin) }
 
     func boot() {
+        startLogUploader()
         Task { await ping(); await refreshAll() }
+    }
+
+    private var logUploader: Task<Void, Never>?
+
+    func startLogUploader() {
+        logUploader?.cancel()
+        logUploader = Task { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 60_000_000_000)
+                await self?.uploadPendingLogs()
+            }
+        }
+    }
+
+    func uploadPendingLogs() async {
+        guard !pin.isEmpty else { return }
+        let lines = DebugLog.shared.pendingEntries()
+        guard !lines.isEmpty else { return }
+        if await api.uploadLogs(lines) {
+            DebugLog.shared.markUploaded(lines.count)
+        }
     }
 
     func ping() async {
