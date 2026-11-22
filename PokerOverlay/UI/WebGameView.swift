@@ -156,8 +156,9 @@ struct WebGameView: UIViewRepresentable {
       function poll(){
         const s = window.__s;
         if (!s) return;
-        const me = (s.viewer && s.viewer.seat != null)
-          ? (s.seats || []).find(function(x){ return x.seat === s.viewer.seat; })
+        const vobj = (s.viewer && typeof s.viewer === 'object') ? s.viewer : null;
+        const me = (vobj && vobj.seat != null)
+          ? (s.seats || []).find(function(x){ return x.seat === vobj.seat; })
           : null;
         window.__my = !!(me && s.next_actor === me.player_id);
         if (window.__my !== window.__lastMy) {
@@ -165,7 +166,7 @@ struct WebGameView: UIViewRepresentable {
           window.__log('turn my=' + (window.__my ? 1 : 0) + ' cards=' + (me && me.cards ? me.cards.join('') : '-'));
         }
         const dbg = document.getElementById('p-dbg');
-        if (dbg) dbg.textContent = 'v' + (s.viewer ? 1 : 0) + ' 座' + (me ? me.seat : '-')
+        if (dbg) dbg.textContent = 'v:' + (vobj ? ('seat' + vobj.seat) : String(s.viewer)) + ' 座' + (me ? me.seat : '-')
           + ' 牌' + (me && me.cards ? me.cards.length : 0) + ' 我' + (window.__my ? 1 : 0);
         const sig = [s.hand_id, s.street, s.to_call, s.pot, (s.board||[]).join(''),
                      me ? (me.cards||[]).join('') : ''].join('|');
@@ -199,12 +200,16 @@ struct WebGameView: UIViewRepresentable {
           const j = await r.json();
           if (!j.viewer && window.__s && window.__s.viewer) j.viewer = window.__s.viewer;
           window.__s = j;
-          window.__log('snap viewer=' + (j.viewer ? 1 : 0) + ' seat=' + (j.viewer && j.viewer.seat != null ? j.viewer.seat : '-') + ' seats=' + (j.seats ? j.seats.length : 0));
+          window.__log('snap viewer=' + JSON.stringify(j.viewer) + ' seat=' + ((j.viewer && typeof j.viewer === 'object' && j.viewer.seat != null) ? j.viewer.seat : '-') + ' seats=' + (j.seats ? j.seats.length : 0));
           poll();
         } catch(e){}
       }
       setInterval(pull, 1500);
       setTimeout(pull, 600);
+      window.__log('seatsStore=' + String(localStorage.getItem('zzpk.seats') || 'null').slice(0, 160));
+      setInterval(function(){
+        window.__log('seatsStore=' + String(localStorage.getItem('zzpk.seats') || 'null').slice(0, 160));
+      }, 8000);
     })();
     """
 }
