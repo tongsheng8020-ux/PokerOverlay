@@ -387,7 +387,7 @@ extension WebGameView {
             ) { [weak self] _ in
                 guard let self else { return }
                 DebugLog.shared.add("[APP] foreground, re-inject HUD")
-                self.webView?.evaluateJavaScript(Self.injectedJS)
+                self.webView?.evaluateJavaScript(WebGameView.injectedJS)
             }
         }
 
