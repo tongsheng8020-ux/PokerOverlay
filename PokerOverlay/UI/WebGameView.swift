@@ -430,6 +430,8 @@ extension WebGameView {
             let history = d["history"] as? String ?? ""
             let opponents = (d["opponents"] as? [[String: Any]]) ?? []
             let actions = (d["actions"] as? [[String: Any]]) ?? []
+            let pids = opponents.compactMap { $0["id"] as? String }
+            if !pids.isEmpty { store.currentPlayerIds = pids }
             let button = d["button"] as? Int ?? -1
             let curBet = d["currentBet"] as? Int ?? 0
             let minRaise = d["minRaise"] as? Int ?? 0

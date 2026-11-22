@@ -82,11 +82,17 @@ struct APIClient {
     }
 
     func prompts() async throws -> [PromptRecord] {
-        try await send(try request("/api/decisions?limit=80"), as: [PromptRecord].self)
+        try await send(try request("/api/decisions?limit=300"), as: [PromptRecord].self)
     }
 
-    func opponents() async throws -> [Opponent] {
-        try await send(try request("/api/opponents/list?limit=200"), as: [Opponent].self)
+    func opponents(ids: [String] = []) async throws -> [Opponent] {
+        var path = "/api/opponents/list?limit=200"
+        if !ids.isEmpty {
+            let joined = ids.joined(separator: ",")
+            let enc = joined.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed) ?? joined
+            path += "&ids=" + enc
+        }
+        return try await send(try request(path), as: [Opponent].self)
     }
 
     func billing() async throws -> Billing {

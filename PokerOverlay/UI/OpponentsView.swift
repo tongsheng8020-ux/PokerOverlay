@@ -12,8 +12,8 @@ struct OpponentsView: View {
                 if items.isEmpty {
                     VStack(spacing: 8) {
                         Image(systemName: "person.2.slash").font(.largeTitle)
-                        Text("还没有对手数据").foregroundStyle(.secondary)
-                        Text("打几手，服务器会自动攒画像")
+                        Text("当前房间暂无对手数据").foregroundStyle(.secondary)
+                        Text("入座开打后，这里只显示本桌的人")
                             .font(.caption).foregroundStyle(.secondary)
                     }
                 } else {
@@ -86,7 +86,7 @@ struct OpponentsView: View {
         loading = true
         error = nil
         do {
-            items = try await store.api.opponents()
+            items = try await store.api.opponents(ids: store.currentPlayerIds)
         } catch {
             self.error = error.localizedDescription
         }

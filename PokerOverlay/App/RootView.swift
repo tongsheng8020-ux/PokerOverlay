@@ -16,9 +16,6 @@ struct RootView: View {
 
             SettingsView()
                 .tabItem { Label("设置", systemImage: "gearshape") }
-
-            DebugView()
-                .tabItem { Label("日志", systemImage: "doc.text.magnifyingglass") }
         }
         .tint(Color(red: 0.35, green: 0.65, blue: 1))
         .sheet(isPresented: $store.showPinGate) {
