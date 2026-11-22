@@ -64,6 +64,19 @@ struct WebGameView: UIViewRepresentable {
     })();
     """
 
+    static func injectHUD(into webView: WKWebView) {
+        DebugLog.shared.add("[JS] reinject start")
+        webView.evaluateJavaScript("window.__h=false; window.__s=null;") { _, _ in
+            webView.evaluateJavaScript(Self.injectedJS) { _, err in
+                if let err {
+                    DebugLog.shared.add("[JS] inject err \(err.localizedDescription)")
+                } else {
+                    DebugLog.shared.add("[JS] inject ok")
+                }
+            }
+        }
+    }
+
     static let injectedJS = """
     (function(){
       if (window.__h) return;
@@ -72,6 +85,8 @@ struct WebGameView: UIViewRepresentable {
       window.__log = function(m){
         try { window.webkit.messageHandlers.log.postMessage(String(m)); } catch(e){}
       };
+      window.log = window.__log;
+      function log(m){ try { window.__log(m); } catch(e){} }
       window.__log('js injected');
       window.__rid = null;
 
@@ -387,7 +402,7 @@ extension WebGameView {
             ) { [weak self] _ in
                 guard let self else { return }
                 DebugLog.shared.add("[APP] foreground, re-inject HUD")
-                self.webView?.evaluateJavaScript(WebGameView.injectedJS)
+                if let wv = self.webView { WebGameView.injectHUD(into: wv) }
             }
         }
 
@@ -398,8 +413,7 @@ extension WebGameView {
             DebugLog.shared.add("[JS] page finished")
             if !hudReinjected {
                 hudReinjected = true
-                webView.evaluateJavaScript(WebGameView.injectedJS)
-                DebugLog.shared.add("[JS] reinject after finish")
+                WebGameView.injectHUD(into: webView)
             }
             if !locRequested {
                 locRequested = true
