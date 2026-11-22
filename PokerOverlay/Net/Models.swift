@@ -1,5 +1,12 @@
 import Foundation
 
+struct CostInfo: Codable {
+    var charged: Double = 0
+    var raw: Double = 0
+    var markup: Double = 1
+    var peak: Bool = false
+}
+
 struct Decision: Codable, Identifiable {
     var id = UUID()
     var ok: Bool? = nil
@@ -8,7 +15,7 @@ struct Decision: Codable, Identifiable {
     var latency_ms: Int? = nil
     var model: String? = nil
     var source: String? = nil
-    var cost: Double? = nil
+    var cost: CostInfo? = nil
     var billing: Billing? = nil
 
     enum CodingKeys: String, CodingKey {

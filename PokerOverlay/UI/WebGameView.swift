@@ -478,6 +478,7 @@ extension WebGameView {
                 DebugLog.shared.add("[HUD] \(act) \(decision.size)")
                 await js("window.zzAiUpdate(\(jsString(fixed.text)))")
             } catch {
+                DebugLog.shared.add("[ERR] \(error.localizedDescription)")
                 await js("window.zzAiUpdate(\(jsString("出错：\(error.localizedDescription)")))")
             }
         }
