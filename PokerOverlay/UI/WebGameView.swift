@@ -285,6 +285,9 @@ struct WebGameViewRep: UIViewRepresentable {
         if (!root) return;
         if (!document.getElementById('p-pill')) root.appendChild(pill);
         if (!document.getElementById('p-hud') && !window.__hidden) root.appendChild(box);
+        const actEl = document.getElementById('p-act');
+        if (actEl && !actEl.textContent) actEl.textContent = '等待牌局…';
+        if (!window.__hidden) box.style.display = 'block';
       };
       let mountLogged = false;
       setInterval(function(){ mount(); if (mountLogged === false && document.getElementById('p-hud')) { mountLogged = true; window.__log('hud mounted'); } }, 800);
