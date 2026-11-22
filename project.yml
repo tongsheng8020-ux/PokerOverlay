@@ -1,0 +1,75 @@
+name: PokerOverlay
+options:
+  bundleIdPrefix: com.fujiang
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    CODE_SIGN_STYLE: Automatic
+    IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+targets:
+  PokerOverlay:
+    type: application
+    platform: iOS
+    sources:
+      - path: PokerOverlay
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.fujiang.pokeroverlay
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        TARGETED_DEVICE_FAMILY: "1"
+    info:
+      path: PokerOverlay/Info.plist
+      properties:
+        CFBundleDisplayName: 德州助手
+        CFBundleShortVersionString: "1.0"
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        UIRequiresFullScreen: false
+        NSAppTransportSecurity:
+          NSAllowsArbitraryLoads: true
+        UIBackgroundModes:
+          - audio
+        NSLocalNetworkUsageDescription: 与屏幕识别扩展在本机通信，把牌局实时变成决策。
+    dependencies:
+      - target: BroadcastExtension
+        embed: true
+      - sdk: AVKit.framework
+      - sdk: AVFoundation.framework
+
+  BroadcastExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: BroadcastExtension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.fujiang.pokeroverlay.broadcast
+        APPLICATION_EXTENSION_API_ONLY: YES
+    info:
+      path: BroadcastExtension/Info.plist
+      properties:
+        CFBundleDisplayName: 屏幕识别
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.broadcast-services-upload
+          NSExtensionPrincipalClass: $(PRODUCT_MODULE_NAME).SampleHandler
+          RPBroadcastProcessMode: RPBroadcastProcessModeSampleBuffer
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+    dependencies:
+      - sdk: Vision.framework
+      - sdk: ReplayKit.framework
+
+schemes:
+  PokerOverlay:
+    build:
+      targets:
+        PokerOverlay: all
+        BroadcastExtension: all
+    run:
+      config: Debug

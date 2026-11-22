@@ -1,0 +1,51 @@
+name: build-ipa
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: macos-14
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build (unsigned)
+        run: |
+          xcodebuild \
+            -project PokerOverlay.xcodeproj \
+            -scheme PokerOverlay \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+
+      - name: Package ipa
+        run: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/PokerOverlay.app Payload/
+          zip -qr PokerOverlay-unsigned.ipa Payload
+          ls -lh PokerOverlay-unsigned.ipa
+
+      - name: Upload release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: PokerOverlay build ${{ github.run_number }}
+          files: PokerOverlay-unsigned.ipa
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PokerOverlay-ipa
+          path: PokerOverlay-unsigned.ipa
+          retention-days: 30
