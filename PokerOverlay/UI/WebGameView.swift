@@ -18,8 +18,7 @@ struct WebGameView: UIViewRepresentable {
         let hudJS = Self.prepareJS(ai: context.coordinator.aiName, log: context.coordinator.logName)
         uc.addUserScript(WKUserScript(source: hudJS,
                                       injectionTime: .atDocumentEnd,
-                                      forMainFrameOnly: false,
-                                      in: Self.hudWorld))
+                                      forMainFrameOnly: false))
         cfg.userContentController = uc
         let wv = WKWebView(frame: .zero, configuration: cfg)
         let osv = UIDevice.current.systemVersion.replacingOccurrences(of: ".", with: "_")
@@ -85,7 +84,7 @@ struct WebGameView: UIViewRepresentable {
     static func injectHUD(into webView: WKWebView, ai: String, log: String) {
         DebugLog.shared.add("[JS] reinject start")
         let js = prepareJS(ai: ai, log: log)
-        webView.evaluateJavaScript("window.__h=false; window.__s=null;", in: nil, in: hudWorld) { _ in
+        webView.evaluateJavaScript("window.__h=false; window.__s=null;", in: nil, in: WKContentWorld.page) { _ in
             let wrapped = """
             (function(){
               try {
@@ -95,7 +94,7 @@ struct WebGameView: UIViewRepresentable {
               }
             })();
             """
-            webView.evaluateJavaScript(wrapped, in: nil, in: hudWorld) { result in
+            webView.evaluateJavaScript(wrapped, in: nil, in: WKContentWorld.page) { result in
                 if case .failure(let err) = result {
                     DebugLog.shared.add("[JS] inject err \(err.localizedDescription)")
                     webView.evaluateJavaScript(js, in: nil, in: WKContentWorld.page) { r2 in
@@ -107,6 +106,11 @@ struct WebGameView: UIViewRepresentable {
                     }
                 } else {
                     DebugLog.shared.add("[JS] inject ok")
+                    let suffix = String(ai.suffix(5))
+                    let check = "(function(){var x=document.getElementById('p-hud-\(suffix)'); return x ? x.style.display : 'missing';})()"
+                    webView.evaluateJavaScript(check, in: nil, in: WKContentWorld.page) { r in
+                        DebugLog.shared.add("[JS] hud check \(String(describing: try? r.get()))")
+                    }
                 }
             }
         }
@@ -644,7 +648,7 @@ extension WebGameView {
 
         @MainActor
         private func js(_ code: String) async {
-            webView?.evaluateJavaScript(code, in: nil, in: WebGameView.hudWorld) { _ in }
+            webView?.evaluateJavaScript(code, in: nil, in: WKContentWorld.page) { _ in }
         }
 
         private func jsString(_ s: String) -> String {
