@@ -458,7 +458,14 @@ extension WebGameView {
             }
             if !locRequested {
                 locRequested = true
-                WebGameView.locMgr.requestWhenInUseAuthorization()
+                switch WebGameView.locMgr.authorizationStatus {
+                case .denied, .restricted:
+                    webView.evaluateJavaScript(WebGameView.fakeLocationJS, in: nil, in: WKContentWorld.page) { _ in
+                        DebugLog.shared.add("[GEO] denied, fallback coords injected")
+                    }
+                default:
+                    WebGameView.locMgr.requestWhenInUseAuthorization()
+                }
             }
         }
 
