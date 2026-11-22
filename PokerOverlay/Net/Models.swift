@@ -24,18 +24,6 @@ struct Decision: Codable, Identifiable {
 
     var latency: Int { latency_ms ?? 0 }
 
-    var timeText: String {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd HH:mm:ss"
-        f.locale = Locale(identifier: "en_US_POSIX")
-        f.timeZone = TimeZone(identifier: "UTC")
-        guard let d = f.date(from: created_at) else { return String(created_at.suffix(5)) }
-        let out = DateFormatter()
-        out.dateFormat = "HH:mm"
-        out.timeZone = TimeZone.current
-        return out.string(from: d)
-    }
-
     var size: String { field("尺寸") }
     var numbers: String { field("数字") }
     var reason: String { field("理由") }
@@ -76,6 +64,18 @@ struct PromptRecord: Codable, Identifiable {
     var reply: String = ""
     var latency_ms: Int = 0
     var created_at: String = ""
+
+    var timeText: String {
+        let f = DateFormatter()
+        f.dateFormat = "yyyy-MM-dd HH:mm:ss"
+        f.locale = Locale(identifier: "en_US_POSIX")
+        f.timeZone = TimeZone(identifier: "UTC")
+        guard let d = f.date(from: created_at) else { return String(created_at.suffix(5)) }
+        let out = DateFormatter()
+        out.dateFormat = "HH:mm"
+        out.timeZone = TimeZone.current
+        return out.string(from: d)
+    }
 
     var size: String { field("尺寸") }
     var reason: String { field("理由") }
