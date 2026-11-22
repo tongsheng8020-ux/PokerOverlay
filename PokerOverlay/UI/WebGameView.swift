@@ -114,14 +114,40 @@ struct WebGameView: UIViewRepresentable {
         + '<div id="p-dbg" style="color:#5b6b80;font-size:9px"></div>';
 
       function stop(e){ e.stopPropagation(); }
-      ['pointerdown','touchstart','click'].forEach(function(t){ box.addEventListener(t, stop, true); });
+      ['pointerdown','touchstart','touchmove'].forEach(function(t){ box.addEventListener(t, stop, true); });
+      let big = false;
       box.addEventListener('click', function(){
-        box.style.maxHeight = box.style.maxHeight === '200px' ? '56px' : '200px';
+        big = !big;
+        box.style.maxHeight = big ? '320px' : '56px';
         const a = document.getElementById('p-act');
-        if (a) a.style.maxHeight = a.style.maxHeight === '180px' ? '34px' : '180px';
+        if (a) a.style.maxHeight = big ? '260px' : '34px';
       });
+      const pill = document.createElement('div');
+      pill.id = 'p-pill';
+      pill.style.cssText = 'position:fixed;left:8px;top:44px;z-index:2147483645;'
+        + 'background:rgba(8,12,18,.92);border:1px solid rgba(88,166,255,.55);border-radius:999px;'
+        + 'padding:4px 10px;color:#58a6ff;font:11px/1.2 -apple-system,PingFang SC,sans-serif;'
+        + 'display:none;';
+      pill.textContent = 'AI';
+      const reopen = function(e){
+        if (e) { e.stopPropagation(); }
+        box.style.display = 'block';
+        pill.style.display = 'none';
+        window.__hidden = false;
+      };
+      pill.addEventListener('click', reopen);
+      pill.addEventListener('touchstart', function(e){ e.stopPropagation(); }, true);
+      pill.addEventListener('touchend', function(e){ e.stopPropagation(); reopen(e); }, true);
+
       const x = box.querySelector('#p-x');
-      x.addEventListener('click', function(){ box.style.display = 'none'; window.__hidden = true; });
+      const close = function(e){
+        if (e) { e.stopPropagation(); }
+        box.style.display = 'none';
+        pill.style.display = 'block';
+        window.__hidden = true;
+      };
+      x.addEventListener('click', close);
+      x.addEventListener('touchend', function(e){ e.stopPropagation(); close(e); }, true);
 
       let drag = null;
       box.addEventListener('touchstart', function(e){
@@ -138,7 +164,9 @@ struct WebGameView: UIViewRepresentable {
 
       const mount = function(){
         const root = document.documentElement || document.body;
-        if (root && !document.getElementById('p-hud') && !window.__hidden) root.appendChild(box);
+        if (!root) return;
+        if (!document.getElementById('p-pill')) root.appendChild(pill);
+        if (!document.getElementById('p-hud') && !window.__hidden) root.appendChild(box);
       };
       let mountLogged = false;
       setInterval(function(){ mount(); if (mountLogged === false && document.getElementById('p-hud')) { mountLogged = true; window.__log('hud mounted'); } }, 800);
