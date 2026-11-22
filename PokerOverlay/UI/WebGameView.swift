@@ -463,6 +463,7 @@ extension WebGameView {
                 DebugLog.shared.add("[SKIP] 去重/在途 key=\(key) inflight=\(inFlight)")
                 return
             }
+            DebugLog.shared.add("[DECIDE] hand=\(hand) street=\(street) hole=\(hole) board=\(board) pot=\(pot) call=\(toCall) stack=\(stack)")
             lastKey = key
             inFlight = true
             defer { inFlight = false }
