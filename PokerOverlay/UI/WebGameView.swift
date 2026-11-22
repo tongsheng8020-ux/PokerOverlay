@@ -5,12 +5,14 @@ import CoreLocation
 
 struct WebGameView: View {
     @EnvironmentObject var store: AppStore
+    /// 原生条默认关闭；JS HUD 失效时改成 true 兜底
+    private let showNativeHUD = false
 
     var body: some View {
         ZStack(alignment: .top) {
             WebGameViewRep()
                 .ignoresSafeArea()
-            if let d = store.decision {
+            if showNativeHUD, let d = store.decision {
                 NativeHUD(decision: d)
                     .padding(.horizontal, 8)
                     .padding(.top, 4)
