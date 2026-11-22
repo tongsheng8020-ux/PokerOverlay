@@ -374,13 +374,16 @@ struct WebGameViewRep: UIViewRepresentable {
             return false;
           });
           if (!me || me.stack == null || !s.hand_id) return;
+          let acctName = '';
+          try { const a = JSON.parse(localStorage.getItem('zzpk.acct') || '{}'); acctName = a.username || a.name || a.account || ''; } catch(e){}
+          const who = acctName || me.player_id;
           const h = String(s.hand_id);
           if (!window.__hs || window.__hs.hand !== h) {
             if (window.__hs && window.__hs.hand) reportHand(window.__hs);
-            window.__hs = { hand: h, account: me.player_id, first: me.stack, last: me.stack };
+            window.__hs = { hand: h, account: who, first: me.stack, last: me.stack };
           } else {
             window.__hs.last = me.stack;
-            window.__hs.account = me.player_id;
+            window.__hs.account = who;
           }
         } catch(e){}
       }
@@ -424,7 +427,7 @@ struct WebGameViewRep: UIViewRepresentable {
             room: String(window.__room || '').slice(0, 8),
             hand: String(s.hand_id || '').slice(0, 8),
             mySeat: me ? me.seat : -1,
-            account: me ? me.player_id : '',
+            account: (function(){try{var a=JSON.parse(localStorage.getItem('zzpk.acct')||'{}');return a.username||a.name||a.account||'';}catch(e){return '';}})() || (me ? me.player_id : ''),
             accountName: (function(){try{var a=JSON.parse(localStorage.getItem('zzpk.acct')||'{}');return a.username||a.name||a.account||a.nickname||'';}catch(e){return '';}})(),
             button: s.button_seat != null ? s.button_seat : -1,
             capacity: s.seats_capacity || 0,
