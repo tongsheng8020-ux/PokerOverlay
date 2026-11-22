@@ -40,7 +40,22 @@ struct Decision: Codable, Identifiable {
     }
 }
 
-struct Billing: Codable {
+'struct Opponent: Codable, Identifiable {
+    var player_id: String = ""
+    var hands: Int = 0
+    var vpip: Int = 0
+    var folds: Int = 0
+    var allins: Int = 0
+    var bets: Int = 0
+    var calls: Int = 0
+    var checks: Int = 0
+    var af: Double = 0
+    var tags: [String] = []
+    var last_seen: String? = nil
+    var id: String { player_id }
+}
+
+struct Billing: Codable {'
     var balance: Double = 0
     var spent: Double = 0
     var calls: Int = 0
