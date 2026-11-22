@@ -33,12 +33,12 @@ struct WebGameView: UIViewRepresentable {
         context.coordinator.store = store
     }
 
-    /// 假定位：把 navigator.geolocation 换成固定坐标（新加坡）。
+    /// 假定位：把 navigator.geolocation 换成固定坐标（吉隆坡）。
     static let fakeLocationJS = """
     (function(){
       if (window.__zzFakeGeo) return;
       window.__zzFakeGeo = true;
-      var LAT = 1.3521, LNG = 103.8198;
+      var LAT = 3.1390, LNG = 101.6869;
       function makePos(){
         return { coords: { latitude: LAT, longitude: LNG, accuracy: 20,
                            altitude: null, altitudeAccuracy: null, heading: null, speed: null },
