@@ -223,7 +223,11 @@ struct WebGameView: UIViewRepresentable {
             board: (s.board || []).join(' '),
             hole: me ? (me.hole || []).join(' ') : '',
             stack: me ? me.stack : 0,
-            legal: (s.legal_actions || []).join('/'),
+            legal: (s.legal_actions || []).map(function(a){
+              if (!a) return '';
+              if (typeof a === 'string') return a;
+              return a.kind || a.action || a.type || JSON.stringify(a);
+            }).filter(Boolean).join('/'),
             myturn: window.__my,
             rule: s.rule || (s.ante ? 'short' : 'long')
           });
@@ -361,13 +365,12 @@ extension WebGameView {
             defer { inFlight = false }
 
             let mode = store.mode
-            let raw = "\(mode == "short" ? "S6" : "L6") 网页牌桌 \(hole) | \(board) | P:\(pot) C:\(toCall) | H:\(stack) | 合法动作:\(legal) | 他行动完轮到我"
+            let raw = "\(mode == "short" ? "S6" : "L6") 网页牌桌 \(hole) | \(board) | P:\(pot) C:\(toCall) | H:\(stack) | 合法动作:\(legal) | 注意：C>0 时不能 CHECK，只能 CALL/RAISE/FOLD；C=0 时不能 CALL | 他行动完轮到我"
             await js("window.zzAiUpdate('分析中…')")
             do {
                 DebugLog.shared.add("[AI] request mode=\(mode) raw=\(raw)")
                 let decision = try await store.api.decide(mode: mode, raw: raw)
                 DebugLog.shared.add("[AI] reply \(decision.action ?? "-") \(decision.latency)ms")
-                DebugLog.shared.add("[HUD] \(decision.action ?? "-") \(decision.size)")
                 var act = (decision.action ?? "").uppercased()
                 if toCall > 0 && (act == "CHECK" || act.isEmpty) {
                     act = "CALL"
@@ -377,9 +380,12 @@ extension WebGameView {
                     act = "CHECK"
                     DebugLog.shared.add("[FIX] illegal CALL -> CHECK (to_call=0)")
                 }
-                store.applyWeb(decision)
-                let text = "\(act)\n\(decision.size)\n\(decision.reason)"
-                await js("window.zzAiUpdate(\(jsString(text)))")
+                var fixed = decision
+                fixed.action = act
+                fixed.text = "\(act)\n\(decision.size)\n\(decision.reason)"
+                store.applyWeb(fixed)
+                DebugLog.shared.add("[HUD] \(act) \(decision.size)")
+                await js("window.zzAiUpdate(\(jsString(fixed.text)))")
             } catch {
                 await js("window.zzAiUpdate(\(jsString("出错：\(error.localizedDescription)")))")
             }
