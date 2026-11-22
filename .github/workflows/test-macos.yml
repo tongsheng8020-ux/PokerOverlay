@@ -1,8 +1,0 @@
-﻿name: test-macos
-on:
-  workflow_dispatch:
-jobs:
-  t:
-    runs-on: macos-14
-    steps:
-      - run: echo hi && sw_vers

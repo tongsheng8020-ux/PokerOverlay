@@ -1,0 +1,40 @@
+﻿workflows:
+  ios-unsigned:
+    name: iOS Unsigned IPA
+    instance_type: mac_mini_m2
+    max_build_duration: 40
+    environment:
+      xcode: latest
+      vars:
+        SCHEME: PokerOverlay
+    scripts:
+      - name: Install XcodeGen
+        script: brew install xcodegen
+      - name: Generate Xcode project
+        script: xcodegen generate
+      - name: Build (unsigned)
+        script: |
+          xcodebuild \
+            -project PokerOverlay.xcodeproj \
+            -scheme "$SCHEME" \
+            -configuration Release \
+            -sdk iphoneos \
+            -derivedDataPath build \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY=""
+      - name: Package ipa
+        script: |
+          mkdir -p Payload
+          cp -R build/Build/Products/Release-iphoneos/PokerOverlay.app Payload/
+          zip -qr PokerOverlay-unsigned.ipa Payload
+          ls -lh PokerOverlay-unsigned.ipa
+    artifacts:
+      - PokerOverlay-unsigned.ipa
+    publishing:
+      email:
+        recipients:
+          - tongsheng8020@gmail.com
+        notify:
+          success: true
+          failure: true
