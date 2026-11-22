@@ -40,7 +40,7 @@ struct Decision: Codable, Identifiable {
     }
 }
 
-'struct Opponent: Codable, Identifiable {
+struct Opponent: Codable, Identifiable {
     var player_id: String = ""
     var hands: Int = 0
     var vpip: Int = 0
@@ -55,7 +55,7 @@ struct Decision: Codable, Identifiable {
     var id: String { player_id }
 }
 
-struct Billing: Codable {'
+struct Billing: Codable {
     var balance: Double = 0
     var spent: Double = 0
     var calls: Int = 0

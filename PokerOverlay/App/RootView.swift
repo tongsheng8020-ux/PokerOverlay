@@ -8,10 +8,10 @@ struct RootView: View {
             WebGameView()
                 .tabItem { Label("牌桌", systemImage: "suit.club.fill") }
 
-'            OpponentsView()
+            OpponentsView()
                 .tabItem { Label("对手信息", systemImage: "person.2.fill") }
 
-            SettingsView()'
+            SettingsView()
                 .tabItem { Label("设置", systemImage: "gearshape") }
 
             DebugView()
