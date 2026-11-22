@@ -223,6 +223,7 @@ struct WebGameView: UIViewRepresentable {
             board: (s.board || []).join(' '),
             hole: me ? (me.hole || []).join(' ') : '',
             stack: me ? me.stack : 0,
+            unit: s.chip_unit || 1,
             legal: (s.legal_actions || []).map(function(a){
               if (!a) return '';
               if (typeof a === 'string') return a;
@@ -358,6 +359,12 @@ extension WebGameView {
             }
 
             let legal = d["legal"] as? String ?? ""
+            let unit = max(1, d["unit"] as? Int ?? 1)
+            let u = Double(unit)
+            func dsp(_ v: Int) -> String {
+                let x = Double(v) / u
+                return x == x.rounded() ? String(Int(x)) : String(format: "%.2f", x)
+            }
             let key = "\(hand)|\(street)|\(pot)|\(toCall)"
             if key == lastKey || inFlight { return }
             lastKey = key
@@ -365,7 +372,7 @@ extension WebGameView {
             defer { inFlight = false }
 
             let mode = store.mode
-            let raw = "\(mode == "short" ? "S6" : "L6") 网页牌桌 \(hole) | \(board) | P:\(pot) C:\(toCall) | H:\(stack) | 合法动作:\(legal) | 注意：C>0 时不能 CHECK，只能 CALL/RAISE/FOLD；C=0 时不能 CALL | 他行动完轮到我"
+            let raw = "\(mode == "short" ? "S6" : "L6") 网页牌桌 \(hole) | \(board) | P:\(dsp(pot)) C:\(dsp(toCall)) | H:\(dsp(stack)) | 计数单位:1 = \(unit) 筹码 | 合法动作:\(legal) | 注意：C>0 时不能 CHECK，只能 CALL/RAISE/FOLD；C=0 时不能 CALL | 所有尺寸都用上面这个显示单位 | 他行动完轮到我"
             await js("window.zzAiUpdate('分析中…')")
             do {
                 DebugLog.shared.add("[AI] request mode=\(mode) raw=\(raw)")
