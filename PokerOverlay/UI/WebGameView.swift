@@ -1,7 +1,7 @@
 import SwiftUI
 import WebKit
 
-/// 直接打开 zzpk.vip 网页版，注入假定位 + AI HUD。
+/// 直接打开 zzpk.vip 网页版，注入假定位 + AI HUD（可拖动/可收起/自己拉 snapshot）。
 struct WebGameView: UIViewRepresentable {
     @EnvironmentObject var store: AppStore
 
@@ -33,7 +33,7 @@ struct WebGameView: UIViewRepresentable {
         context.coordinator.store = store
     }
 
-    /// 假定位：把 navigator.geolocation 换成固定坐标（吉隆坡）。
+    /// 假定位：固定坐标（吉隆坡）。
     static let fakeLocationJS = """
     (function(){
       if (window.__zzFakeGeo) return;
@@ -69,43 +69,116 @@ struct WebGameView: UIViewRepresentable {
       if (window.__zzAiInstalled) return;
       window.__zzAiInstalled = true;
       window.__snap = null;
+      window.__roomId = null;
 
+      /* 1. 抓页面自己的 snapshot（fetch + XHR） */
       const origFetch = window.fetch;
       window.fetch = function(){
         const args = arguments;
+        const u = String((args[0] && args[0].url) || args[0] || '');
+        const m = u.match(/\\/v1\\/rooms\\/([0-9a-f]+)\\/snapshot/);
+        if (m) window.__roomId = m[1];
         return origFetch.apply(this, args).then(function(r){
           try {
-            const u = String((args[0] && args[0].url) || args[0]);
-            if (u.indexOf('/snapshot') >= 0) {
-              r.clone().json().then(function(j){ window.__snap = j; poll(); }).catch(function(){});
-            }
+            if (m) { r.clone().json().then(function(j){ window.__snap = j; poll(); }).catch(function(){}); }
           } catch(e){}
           return r;
         });
       };
+      const origOpen = XMLHttpRequest.prototype.open;
+      XMLHttpRequest.prototype.open = function(method, url){
+        const u = String(url || '');
+        const m = u.match(/\\/v1\\/rooms\\/([0-9a-f]+)\\/snapshot/);
+        if (m) {
+          window.__roomId = m[1];
+          this.addEventListener('load', function(){
+            try { window.__snap = JSON.parse(this.responseText); poll(); } catch(e){}
+          });
+        }
+        return origOpen.apply(this, arguments);
+      };
 
+      /* 2. 自己定时拉 snapshot */
+      function token(){
+        try { return JSON.parse(localStorage.getItem('zzpk.acct')).token; } catch(e){ return null; }
+      }
+      function findRoomFromPerf(){
+        try {
+          const names = performance.getEntriesByType('resource').map(function(e){ return e.name; });
+          for (let i = names.length - 1; i >= 0; i--) {
+            const m = names[i].match(/\\/v1\\/rooms\\/([0-9a-f]+)\\//);
+            if (m) return m[1];
+          }
+        } catch(e){}
+        return null;
+      }
+      async function pull(){
+        if (!window.__roomId) window.__roomId = findRoomFromPerf();
+        const rid = window.__roomId, tk = token();
+        if (!rid || !tk) return;
+        try {
+          const r = await origFetch('/v1/rooms/' + rid + '/snapshot', {
+            headers: { 'Authorization': 'Bearer ' + tk, 'X-Account-Session': tk }
+          });
+          if (r.ok) { window.__snap = await r.json(); poll(); }
+        } catch(e){}
+      }
+      setInterval(pull, 1200);
+
+      /* 3. HUD */
       const box = document.createElement('div');
       box.id = 'zz-ai-hud';
-      box.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);left:8px;right:8px;z-index:2147483647;'
-        + 'background:rgba(8,12,18,.92);border:1px solid rgba(88,166,255,.55);border-radius:12px;'
-        + 'padding:6px 10px;color:#e9eef6;font:12.5px/1.45 -apple-system,PingFang SC,sans-serif;'
-        + 'box-shadow:0 8px 24px rgba(0,0,0,.5);display:none;max-height:62px;overflow:hidden;'
-        + 'transition:max-height .18s ease';
-      box.innerHTML = '<div style="color:#58a6ff;font-weight:700;font-size:11px;margin-bottom:2px">'
-        + 'AI 助手 · 点我展开/收起</div>'
-        + '<div id="zz-ai-act" style="white-space:pre-wrap;max-height:40px;overflow:hidden">等待牌局…</div>';
+      box.style.cssText = 'position:fixed;top:calc(env(safe-area-inset-top,0px) + 6px);left:8px;right:8px;'
+        + 'z-index:2147483647;background:rgba(8,12,18,.93);border:1px solid rgba(88,166,255,.55);'
+        + 'border-radius:12px;padding:6px 10px;color:#e9eef6;'
+        + 'font:12.5px/1.45 -apple-system,PingFang SC,sans-serif;'
+        + 'box-shadow:0 8px 24px rgba(0,0,0,.5);display:none;max-height:64px;overflow:hidden;'
+        + 'transition:max-height .18s ease;touch-action:none;user-select:none;';
+      box.innerHTML = '<div style="display:flex;align-items:center;gap:8px">'
+        + '<span style="color:#58a6ff;font-weight:700;font-size:11px;flex:1">AI 助手 · 可拖动 / 点我展开</span>'
+        + '<span id="zz-ai-x" style="padding:0 8px;border:1px solid rgba(255,255,255,.25);'
+        + 'border-radius:999px;font-size:11px;line-height:20px">收</span></div>'
+        + '<div id="zz-ai-act" style="white-space:pre-wrap;max-height:44px;overflow:hidden;margin-top:2px">'
+        + '等待牌局…</div>'
+        + '<div id="zz-ai-dbg" style="color:#5b6b80;font-size:10px;margin-top:2px"></div>';
+
       let expanded = false;
+      function stop(e){ e.stopPropagation(); e.preventDefault(); }
+      ['touchstart','touchend','touchmove','pointerdown','pointerup','click'].forEach(function(t){
+        box.addEventListener(t, stop, true);
+      });
       box.addEventListener('click', function(){
         expanded = !expanded;
-        box.style.maxHeight = expanded ? '300px' : '62px';
+        box.style.maxHeight = expanded ? '300px' : '64px';
         const a = document.getElementById('zz-ai-act');
-        if (a) a.style.maxHeight = expanded ? '260px' : '40px';
+        if (a) a.style.maxHeight = expanded ? '240px' : '44px';
       });
-      const mount = function(){ if (document.body && !document.getElementById('zz-ai-hud')) document.body.appendChild(box); };
+      const closeBtn = box.querySelector('#zz-ai-x');
+      closeBtn.addEventListener('click', function(){ box.style.display = 'none'; window.__zzHidden = true; });
+      closeBtn.addEventListener('touchstart', function(){ box.style.display = 'none'; window.__zzHidden = true; });
+
+      let drag = null;
+      box.addEventListener('touchstart', function(e){
+        const t = e.touches[0];
+        drag = { x: t.clientX, y: t.clientY, top: box.offsetTop, left: box.offsetLeft };
+      }, true);
+      box.addEventListener('touchmove', function(e){
+        if (!drag) return;
+        const t = e.touches[0];
+        box.style.top = Math.max(0, drag.top + (t.clientY - drag.y)) + 'px';
+        box.style.left = Math.max(0, drag.left + (t.clientX - drag.x)) + 'px';
+        box.style.right = 'auto';
+      }, true);
+      box.addEventListener('touchend', function(){ drag = null; }, true);
+
+      const mount = function(){
+        if (document.body && !document.getElementById('zz-ai-hud') && !window.__zzHidden) {
+          document.body.appendChild(box);
+        }
+      };
       setInterval(mount, 800);
       mount();
 
-      let lastSig = '';
       window.zzAiUpdate = function(text){
         const el = document.getElementById('zz-ai-act');
         if (el) el.textContent = text;
@@ -113,12 +186,21 @@ struct WebGameView: UIViewRepresentable {
       };
       window.zzAiHide = function(){ box.style.display = 'none'; };
 
+      let lastSig = '';
+      window.__zzMyTurn = false;
+      window.__zzSeated = false;
+
       function poll(){
         const s = window.__snap;
-        if (!s) { return; }
+        if (!s) return;
         const me = (s.viewer && s.viewer.seat != null)
           ? (s.seats || []).find(function(x){ return x.seat === s.viewer.seat; })
           : null;
+        window.__zzSeated = !!me;
+        window.__zzMyTurn = !!(me && s.next_actor === me.player_id);
+        const dbg = document.getElementById('zz-ai-dbg');
+        if (dbg) dbg.textContent = 'snap✓ 座位' + (me ? me.seat : '-') + ' 手牌' +
+          (me && me.cards ? me.cards.length : 0) + ' 轮到我' + (window.__zzMyTurn ? '是' : '否');
         const sig = [s.hand_id, s.street, s.to_call, s.pot, (s.board||[]).join(''),
                      me ? (me.cards||[]).join('') : ''].join('|');
         if (sig === lastSig) return;
@@ -132,7 +214,7 @@ struct WebGameView: UIViewRepresentable {
           hole: me ? (me.cards || []).join(' ') : '',
           stack: me ? me.stack : 0,
           legal: (s.legal_actions || []).join('/'),
-          myturn: !!(me && s.next_actor === me.player_id),
+          myturn: window.__zzMyTurn,
           rule: s.rule || (s.ante ? 'short' : 'long')
         };
         try { window.webkit.messageHandlers.ai.postMessage(payload); } catch(e){}
