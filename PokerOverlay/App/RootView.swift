@@ -8,6 +8,9 @@ struct RootView: View {
             WebGameView()
                 .tabItem { Label("牌桌", systemImage: "suit.club.fill") }
 
+            PromptsView()
+                .tabItem { Label("提示历史", systemImage: "clock.arrow.circlepath") }
+
             OpponentsView()
                 .tabItem { Label("对手信息", systemImage: "person.2.fill") }
 

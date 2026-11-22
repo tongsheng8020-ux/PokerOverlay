@@ -81,6 +81,10 @@ struct APIClient {
         }
     }
 
+    func prompts() async throws -> [PromptRecord] {
+        try await send(try request("/api/decisions?limit=80"), as: [PromptRecord].self)
+    }
+
     func opponents() async throws -> [Opponent] {
         try await send(try request("/api/opponents/list?limit=200"), as: [Opponent].self)
     }

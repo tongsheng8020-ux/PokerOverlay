@@ -47,6 +47,33 @@ struct Decision: Codable, Identifiable {
     }
 }
 
+struct PromptRecord: Codable, Identifiable {
+    var id: Int = 0
+    var mode: String = ""
+    var action: String = ""
+    var reply: String = ""
+    var latency_ms: Int = 0
+    var created_at: String = ""
+
+    var size: String { field("尺寸") }
+    var reason: String { field("理由") }
+    var confidence: Int {
+        Int(field("置信度").filter { $0.isNumber }.prefix(3)) ?? 0
+    }
+
+    private func field(_ name: String) -> String {
+        for line in reply.split(separator: "\n") {
+            var s = String(line).trimmingCharacters(in: .whitespaces)
+            let tag = "【\(name)】"
+            guard s.contains(tag) else { continue }
+            s = s.replacingOccurrences(of: tag, with: "")
+            s = s.replacingOccurrences(of: "：", with: "")
+            return s.trimmingCharacters(in: .whitespaces)
+        }
+        return ""
+    }
+}
+
 struct Opponent: Codable, Identifiable {
     var player_id: String = ""
     var hands: Int = 0
