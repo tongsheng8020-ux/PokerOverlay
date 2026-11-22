@@ -5,6 +5,9 @@ struct RootView: View {
 
     var body: some View {
         TabView {
+            WebGameView()
+                .tabItem { Label("牌桌", systemImage: "suit.club.fill") }
+
             DecideView()
                 .tabItem { Label("决策", systemImage: "suit.spade.fill") }
 

@@ -111,6 +111,11 @@ final class AppStore: ObservableObject {
         }
     }
 
+    func applyWeb(_ d: Decision) {
+        decision = d
+        pip.update(d, mode: mode)
+    }
+
     private func apply(_ d: Decision) {
         decision = d
         pip.update(d, mode: mode)
