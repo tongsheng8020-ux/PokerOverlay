@@ -98,7 +98,7 @@ struct WebGameView: UIViewRepresentable {
             webView.evaluateJavaScript(wrapped, in: nil, in: hudWorld) { result in
                 if case .failure(let err) = result {
                     DebugLog.shared.add("[JS] inject err \(err.localizedDescription)")
-                    webView.evaluateJavaScript(js, in: nil, in: nil) { r2 in
+                    webView.evaluateJavaScript(js, in: nil, in: WKContentWorld.page) { r2 in
                         if case .failure(let e2) = r2 {
                             DebugLog.shared.add("[JS] page fallback err \(e2.localizedDescription)")
                         } else {
@@ -644,7 +644,7 @@ extension WebGameView {
 
         @MainActor
         private func js(_ code: String) async {
-            _ = try? await webView?.evaluateJavaScript(code, in: nil, in: WebGameView.hudWorld)
+            webView?.evaluateJavaScript(code, in: nil, in: WebGameView.hudWorld) { _ in }
         }
 
         private func jsString(_ s: String) -> String {
