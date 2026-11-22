@@ -482,6 +482,10 @@ extension WebGameView {
                     act = "CALL"
                     DebugLog.shared.add("[FIX] illegal CHECK -> CALL (to_call=\(toCall))")
                 }
+                if toCall > 0 && act == "BET" {
+                    act = "RAISE"
+                    DebugLog.shared.add("[FIX] BET -> RAISE (to_call=\(toCall))")
+                }
                 if toCall == 0 && act == "CALL" {
                     act = "CHECK"
                     DebugLog.shared.add("[FIX] illegal CALL -> CHECK (to_call=0)")
@@ -491,17 +495,46 @@ extension WebGameView {
                     sizeText = dsp(toCall)
                 } else if act == "CHECK" || act == "FOLD" {
                     sizeText = "—"
+                } else if let n = num(decision.size) {
+                    let lo = max(Double(toCall) / u, Double(minRaise) / u)
+                    let hi = Double(stack) / u
+                    var v = n
+                    if v < lo && lo > 0 {
+                        v = lo
+                        DebugLog.shared.add("[FIX] raise size \(n) -> \(v) (min)")
+                    }
+                    if v > hi && hi > 0 {
+                        v = hi
+                        DebugLog.shared.add("[FIX] raise size \(n) -> allin \(v)")
+                    }
+                    sizeText = fmt(v)
                 }
                 var fixed = decision
                 fixed.action = act
                 fixed.text = "\(act)\n\(sizeText)\n\(decision.reason)"
                 store.applyWeb(fixed)
-                DebugLog.shared.add("[HUD] \(act) \(decision.size)")
+                DebugLog.shared.add("[HUD] \(act) \(sizeText)")
                 await js("window.zzAiUpdate(\(jsString(fixed.text)))")
             } catch {
                 DebugLog.shared.add("[ERR] \(error.localizedDescription)")
                 await js("window.zzAiUpdate(\(jsString("出错：\(error.localizedDescription)")))")
             }
+        }
+
+        private func num(_ s: String) -> Double? {
+            var t = ""
+            for ch in s {
+                if ch.isNumber || ch == "." {
+                    t.append(ch)
+                } else if !t.isEmpty {
+                    break
+                }
+            }
+            return Double(t)
+        }
+
+        private func fmt(_ v: Double) -> String {
+            v == v.rounded() ? String(Int(v)) : String(format: "%.2f", v)
         }
 
         @MainActor
