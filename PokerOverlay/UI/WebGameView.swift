@@ -402,6 +402,7 @@ extension WebGameView {
             let hand = d["hand"] as? String ?? ""
             let street = d["street"] as? String ?? ""
             _ = d["rule"] as? String ?? "long"
+            let mySeat = d["mySeat"] as? Int ?? -1
 
             if myturn {
                 DebugLog.shared.add("[AI] state hand=\(hand) street=\(street) hole=\(hole) board=\(board) pot=\(pot) call=\(toCall)")
@@ -425,7 +426,6 @@ extension WebGameView {
             }
 
             let legal = d["legal"] as? String ?? ""
-            let mySeat = d["mySeat"] as? Int ?? -1
             let activePlayers = d["active"] as? Int ?? 0
             let history = d["history"] as? String ?? ""
             let opponents = (d["opponents"] as? [[String: Any]]) ?? []
