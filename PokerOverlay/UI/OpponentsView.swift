@@ -85,6 +85,11 @@ struct OpponentsView: View {
     private func load() async {
         loading = true
         error = nil
+        if store.currentPlayerIds.isEmpty {
+            items = []
+            loading = false
+            return
+        }
         do {
             items = try await store.api.opponents(ids: store.currentPlayerIds)
         } catch {
