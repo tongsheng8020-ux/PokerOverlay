@@ -19,7 +19,6 @@ struct WebGameView: UIViewRepresentable {
                                       injectionTime: .atDocumentEnd,
                                       forMainFrameOnly: false))
         cfg.userContentController = uc
-        Self.locMgr.requestWhenInUseAuthorization()
         let wv = WKWebView(frame: .zero, configuration: cfg)
         wv.navigationDelegate = context.coordinator
         wv.uiDelegate = context.coordinator
@@ -33,7 +32,7 @@ struct WebGameView: UIViewRepresentable {
         context.coordinator.store = store
     }
 
-    private static let locMgr = CLLocationManager()
+    static let locMgr = CLLocationManager()
 
     static let fakeLocationJS = """
     (function(){
@@ -390,6 +389,30 @@ extension WebGameView {
                 DebugLog.shared.add("[APP] foreground, re-inject HUD")
                 self.webView?.evaluateJavaScript(WebGameView.injectedJS)
             }
+        }
+
+        private var locRequested = false
+        private var hudReinjected = false
+
+        func webView(_ webView: WKWebView, didFinish navigation: WKNavigation!) {
+            DebugLog.shared.add("[JS] page finished")
+            if !hudReinjected {
+                hudReinjected = true
+                webView.evaluateJavaScript(WebGameView.injectedJS)
+                DebugLog.shared.add("[JS] reinject after finish")
+            }
+            if !locRequested {
+                locRequested = true
+                WebGameView.locMgr.requestWhenInUseAuthorization()
+            }
+        }
+
+        func webView(_ webView: WKWebView, didFail navigation: WKNavigation!, withError error: Error) {
+            DebugLog.shared.add("[JS] nav fail \(error.localizedDescription)")
+        }
+
+        func webView(_ webView: WKWebView, didFailProvisionalNavigation navigation: WKNavigation!, withError error: Error) {
+            DebugLog.shared.add("[JS] nav provisional fail \(error.localizedDescription)")
         }
 
         func webView(_ webView: WKWebView,
