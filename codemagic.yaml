@@ -22,7 +22,9 @@
             -derivedDataPath build \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGN_IDENTITY=""
+            CODE_SIGN_IDENTITY="" \
+            MARKETING_VERSION=1.0 \
+            CURRENT_PROJECT_VERSION=${BUILD_NUMBER:-1}
       - name: Package ipa
         script: |
           mkdir -p Payload

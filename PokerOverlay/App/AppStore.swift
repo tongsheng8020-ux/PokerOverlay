@@ -23,6 +23,12 @@ final class AppStore: ObservableObject {
     @Published var billing: Billing?
     @Published var keyExpires: String?
 
+    var appVersion: String {
+        let v = Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "1.0"
+        let b = Bundle.main.infoDictionary?["CFBundleVersion"] as? String ?? "1"
+        return "\(v) (\(b))"
+    }
+
     var keyRemaining: String {
         guard let txt = keyExpires else { return "未知" }
         let f = DateFormatter()

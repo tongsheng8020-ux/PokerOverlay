@@ -48,6 +48,12 @@ struct SettingsView: View {
                             .foregroundStyle(.secondary)
                     }
                     HStack {
+                        Text("版本")
+                        Spacer()
+                        Text(store.appVersion)
+                            .foregroundStyle(.secondary)
+                    }
+                    HStack {
                         Text("剩余时间")
                         Spacer()
                         Text(store.keyRemaining)
