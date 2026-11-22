@@ -381,8 +381,7 @@ struct WebGameViewRep: UIViewRepresentable {
           window.__log('turn my=' + (window.__my ? 1 : 0) + ' seat=' + (me ? me.seat : '-') + ' hole=' + (me && me.hole ? me.hole.join('') : '-'));
         }
         const dbg = document.getElementById('p-dbg');
-        if (dbg) dbg.textContent = 'v:' + (vobj ? ('seat' + vobj.seat) : String(s.viewer)) + ' 座' + (me ? me.seat : '-')
-          + ' 牌' + (me && me.hole ? me.hole.length : 0) + ' 我' + (window.__my ? 1 : 0);
+        if (dbg) dbg.textContent = '座' + (me ? me.seat : '-') + ' · 牌' + (me && me.hole ? me.hole.length : 0);
         const sig = [s.hand_id, s.street, s.to_call, s.pot, (s.board||[]).join(''),
                      me ? (me.hole||[]).join('') : ''].join('|');
         if (sig === lastSig) return;
