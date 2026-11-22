@@ -6,7 +6,7 @@ import Combine
 @MainActor
 final class AppStore: ObservableObject {
     @Published var baseURL: String { didSet { defaults.set(baseURL, forKey: "base") } }
-    @Published var pin: String { didSet { defaults.set(pin, forKey: "pin") } }
+    @Published var pin: String { didSet { defaults.set(pin, forKey: "license") } }
     @Published var mode: String = "long"
     @Published var raw: String = ""
     @Published var decision: Decision?
@@ -21,6 +21,7 @@ final class AppStore: ObservableObject {
     @Published var showPinGate = false
     @Published var serverOK: Bool?
     @Published var billing: Billing?
+    @Published var keyExpires: String?
     @Published var currentPlayerIds: [String] = []
     @Published var bridgeConnected = false
     @Published var pipActive = false
@@ -37,7 +38,7 @@ final class AppStore: ObservableObject {
 
     init() {
         let savedBase = UserDefaults.standard.string(forKey: "base") ?? "http://64.90.0.27:8099"
-        let savedPin = UserDefaults.standard.string(forKey: "pin") ?? ""
+        let savedPin = UserDefaults.standard.string(forKey: "license") ?? ""
         baseURL = savedBase
         pin = savedPin
         showPinGate = savedPin.isEmpty
@@ -167,7 +168,6 @@ final class AppStore: ObservableObject {
     func refreshAll() async {
         if pin.isEmpty { return }
         do {
-            if let b = try? await api.billing() { billing = b }
             serverOK = true
         } catch {
             errorText = error.localizedDescription

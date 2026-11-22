@@ -34,35 +34,6 @@ struct SettingsView: View {
                         .foregroundStyle(.secondary)
                 }
 
-                Section("余额") {
-                    if let b = store.billing {
-                        HStack {
-                            Text("余额")
-                            Spacer()
-                            Text(String(format: "¥ %.4f", b.balance))
-                                .font(.headline)
-                                .monospacedDigit()
-                        }
-                        HStack {
-                            Text("已用")
-                            Spacer()
-                            Text(String(format: "¥ %.4f", b.spent))
-                                .foregroundStyle(.secondary)
-                        }
-                        HStack {
-                            Text("调用 / Token")
-                            Spacer()
-                            Text("\(b.calls) 次 / \(b.tokens)")
-                                .foregroundStyle(.secondary)
-                        }
-                    } else {
-                        Text("暂无数据").foregroundStyle(.secondary)
-                    }
-                    Button("刷新余额") {
-                        Task { await store.refreshBilling() }
-                    }
-                }
-
                 Section("状态") {
                     HStack {
                         Text("服务器")
@@ -71,7 +42,7 @@ struct SettingsView: View {
                             .foregroundStyle(store.serverOK == true ? .green : .secondary)
                     }
                     HStack {
-                        Text("访问密码")
+                        Text("卡密")
                         Spacer()
                         Text(store.pin.isEmpty ? "未设置" : "已设置")
                             .foregroundStyle(.secondary)

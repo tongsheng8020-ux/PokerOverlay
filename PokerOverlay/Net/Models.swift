@@ -47,6 +47,12 @@ struct Decision: Codable, Identifiable {
     }
 }
 
+struct KeyInfo: Codable {
+    var ok: Bool = true
+    var expires_at: String? = nil
+    var kind: String? = nil
+}
+
 struct PromptRecord: Codable, Identifiable {
     var id: Int = 0
     var mode: String = ""
@@ -76,6 +82,7 @@ struct PromptRecord: Codable, Identifiable {
 
 struct Opponent: Codable, Identifiable {
     var player_id: String = ""
+    var name: String = ""
     var hands: Int = 0
     var vpip: Int = 0
     var folds: Int = 0

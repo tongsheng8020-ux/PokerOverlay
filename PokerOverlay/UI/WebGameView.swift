@@ -1,5 +1,6 @@
 import SwiftUI
 import WebKit
+import CoreLocation
 
 /// 打开 zzpk.vip 网页版，注入假定位 + 轻量 HUD（不覆盖 fetch，靠 seat token 轮询）。
 struct WebGameView: UIViewRepresentable {
@@ -14,13 +15,11 @@ struct WebGameView: UIViewRepresentable {
         let uc = WKUserContentController()
         uc.add(WeakScriptMessageHandler(context.coordinator), name: "ai")
         uc.add(WeakScriptMessageHandler(context.coordinator), name: "log")
-        uc.addUserScript(WKUserScript(source: Self.fakeLocationJS,
-                                      injectionTime: .atDocumentStart,
-                                      forMainFrameOnly: false))
-        uc.addUserScript(WKUserScript(source: Self.injectedJS,
+                uc.addUserScript(WKUserScript(source: Self.injectedJS,
                                       injectionTime: .atDocumentEnd,
                                       forMainFrameOnly: false))
         cfg.userContentController = uc
+        Self.locMgr.requestWhenInUseAuthorization()
         let wv = WKWebView(frame: .zero, configuration: cfg)
         wv.navigationDelegate = context.coordinator
         wv.uiDelegate = context.coordinator
@@ -33,6 +32,8 @@ struct WebGameView: UIViewRepresentable {
     func updateUIView(_ uiView: WKWebView, context: Context) {
         context.coordinator.store = store
     }
+
+    private static let locMgr = CLLocationManager()
 
     static let fakeLocationJS = """
     (function(){
@@ -268,7 +269,7 @@ struct WebGameView: UIViewRepresentable {
             history: window.__hist.join('；'),
             actions: window.__acts.slice(-40),
             opponents: (s.seats || []).map(function(x){
-              return { id: x.player_id, folded: !!x.folded, contrib: x.total_contribution || 0, allin: !!x.all_in };
+              return { id: x.player_id, name: x.name || x.nickname || x.display_name || x.player_name || '', folded: !!x.folded, contrib: x.total_contribution || 0, allin: !!x.all_in };
             }),
             seats: (s.seats || []).map(function(x){
               return { seat: x.seat, stack: x.stack, folded: !!x.folded,
@@ -520,7 +521,13 @@ extension WebGameView {
                 await js("window.zzAiUpdate(\(jsString(fixed.text)))")
             } catch {
                 DebugLog.shared.add("[ERR] \(error.localizedDescription)")
-                await js("window.zzAiUpdate(\(jsString("出错：\(error.localizedDescription)")))")
+                let low = error.localizedDescription.lowercased()
+                if low.contains("expired") || low.contains("invalid key") || low.contains("card key") {
+                    store.showPinGate = true
+                    await js("window.zzAiUpdate('卡密已过期，请重新输入')")
+                } else {
+                    await js("window.zzAiUpdate(\(jsString("出错：\(error.localizedDescription)")))")
+                }
             }
         }
 

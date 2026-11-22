@@ -48,7 +48,7 @@ struct OpponentsView: View {
     private func row(_ o: Opponent) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
-                Text(String(o.player_id.prefix(8)))
+                Text(o.name.isEmpty ? String(o.player_id.prefix(8)) : o.name)
                     .font(.system(size: 13, weight: .semibold, design: .monospaced))
                 ForEach(o.tags, id: \.self) { t in
                     Text(t)

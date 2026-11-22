@@ -25,7 +25,7 @@ struct APIClient {
         guard let url = URL(string: trimmed + path) else { throw APIError.badURL }
         var req = URLRequest(url: url, timeoutInterval: 70)
         req.httpMethod = method
-        req.setValue(pin, forHTTPHeaderField: "X-Pin")
+        req.setValue(pin, forHTTPHeaderField: "X-Key")
         if let body {
             req.setValue("application/json", forHTTPHeaderField: "Content-Type")
             req.httpBody = try JSONSerialization.data(withJSONObject: body)
@@ -83,6 +83,11 @@ struct APIClient {
 
     func prompts() async throws -> [PromptRecord] {
         try await send(try request("/api/decisions?limit=300"), as: [PromptRecord].self)
+    }
+
+    func activateKey(_ key: String) async throws -> KeyInfo {
+        let body: [String: Any] = ["key": key, "device": "ios"]
+        return try await send(try request("/api/key/activate", method: "POST", body: body), as: KeyInfo.self)
     }
 
     func opponents(ids: [String] = []) async throws -> [Opponent] {

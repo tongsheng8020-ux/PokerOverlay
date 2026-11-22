@@ -36,12 +36,12 @@ struct PinGateView: View {
             Image(systemName: "suit.spade.fill")
                 .font(.system(size: 52))
                 .foregroundStyle(.linearGradient(colors: [.white, .gray], startPoint: .top, endPoint: .bottom))
-            Text("输入访问密码")
+            Text("输入卡密")
                 .font(.title2.bold())
-            Text("第一次使用需要验证，之后自动记住")
+            Text("卡密有效期 24 小时 / 7 天，到期后不再提示")
                 .font(.footnote)
                 .foregroundStyle(.secondary)
-            SecureField("密码", text: $input)
+            TextField("卡密", text: $input)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .multilineTextAlignment(.center)
@@ -67,14 +67,17 @@ struct PinGateView: View {
 
     private func submit() async {
         checking = true
-        store.pin = input
+        let key = input.trimmingCharacters(in: .whitespacesAndNewlines).uppercased()
         do {
-            _ = try await store.api.overview()
+            let info = try await store.api.activateKey(key)
+            store.pin = key
+            store.keyExpires = info.expires_at
             store.showPinGate = false
+            self.error = nil
             await store.refreshAll()
         } catch {
             store.pin = ""
-            self.error = "密码不对或服务器连不上"
+            self.error = "卡密无效或已过期"
         }
         checking = false
     }
