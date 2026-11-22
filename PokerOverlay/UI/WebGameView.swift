@@ -84,7 +84,7 @@ struct WebGameView: UIViewRepresentable {
           const v = m[rid];
           if (!v) return null;
           if (typeof v === 'string') return v;
-          return v.token || v.t || v.seatTok || null;
+          return v.player_token || v.token || v.t || v.seatTok || null;
         } catch(e){ return null; }
       }
       function findRoom(){
@@ -185,19 +185,22 @@ struct WebGameView: UIViewRepresentable {
         const s = window.__s;
         if (!s) return;
         const vobj = (s.viewer && typeof s.viewer === 'object') ? s.viewer : null;
-        const me = (vobj && vobj.seat != null)
-          ? (s.seats || []).find(function(x){ return x.seat === vobj.seat; })
-          : null;
+        const vid = (typeof s.viewer === 'string' && s.viewer !== 'spectator') ? s.viewer : null;
+        const me = (s.seats || []).find(function(x){
+          if (vobj && vobj.seat != null && x.seat === vobj.seat) return true;
+          if (vid && x.player_id === vid) return true;
+          return false;
+        }) || null;
         window.__my = !!(me && s.next_actor === me.player_id);
         if (window.__my !== window.__lastMy) {
           window.__lastMy = window.__my;
-          window.__log('turn my=' + (window.__my ? 1 : 0) + ' cards=' + (me && me.cards ? me.cards.join('') : '-'));
+          window.__log('turn my=' + (window.__my ? 1 : 0) + ' seat=' + (me ? me.seat : '-') + ' hole=' + (me && me.hole ? me.hole.join('') : '-'));
         }
         const dbg = document.getElementById('p-dbg');
         if (dbg) dbg.textContent = 'v:' + (vobj ? ('seat' + vobj.seat) : String(s.viewer)) + ' 座' + (me ? me.seat : '-')
-          + ' 牌' + (me && me.cards ? me.cards.length : 0) + ' 我' + (window.__my ? 1 : 0);
+          + ' 牌' + (me && me.hole ? me.hole.length : 0) + ' 我' + (window.__my ? 1 : 0);
         const sig = [s.hand_id, s.street, s.to_call, s.pot, (s.board||[]).join(''),
-                     me ? (me.cards||[]).join('') : ''].join('|');
+                     me ? (me.hole||[]).join('') : ''].join('|');
         if (sig === lastSig) return;
         lastSig = sig;
         try {
@@ -205,7 +208,7 @@ struct WebGameView: UIViewRepresentable {
             hand: String(s.hand_id || '').slice(0, 8),
             street: s.street || '', pot: s.pot || 0, to_call: s.to_call || 0,
             board: (s.board || []).join(' '),
-            hole: me ? (me.cards || []).join(' ') : '',
+            hole: me ? (me.hole || []).join(' ') : '',
             stack: me ? me.stack : 0,
             legal: (s.legal_actions || []).join('/'),
             myturn: window.__my,
