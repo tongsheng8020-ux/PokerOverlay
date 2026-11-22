@@ -2,8 +2,71 @@ import SwiftUI
 import WebKit
 import CoreLocation
 
+
+struct WebGameView: View {
+    @EnvironmentObject var store: AppStore
+
+    var body: some View {
+        ZStack(alignment: .top) {
+            WebGameViewRep()
+                .ignoresSafeArea()
+            if let d = store.decision {
+                NativeHUD(decision: d)
+                    .padding(.horizontal, 8)
+                    .padding(.top, 4)
+            }
+        }
+    }
+}
+
+struct NativeHUD: View {
+    let decision: Decision
+    @State private var expanded = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            HStack(spacing: 6) {
+                Text("提示")
+                    .font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(Color(red: 0.35, green: 0.65, blue: 1))
+                Text(decision.action ?? "—")
+                    .font(.system(size: 13, weight: .heavy, design: .rounded))
+                    .foregroundStyle(color)
+                Text(decision.size)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.orange)
+                Spacer()
+                Text(expanded ? "收" : "展")
+                    .font(.system(size: 9))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .padding(.horizontal, 5).padding(.vertical, 1)
+                    .overlay(RoundedRectangle(cornerRadius: 8).stroke(.white.opacity(0.3), lineWidth: 0.5))
+            }
+            if expanded {
+                Text(decision.reason)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.white.opacity(0.85))
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 5)
+        .background(Color(red: 0.03, green: 0.05, blue: 0.08).opacity(0.92), in: RoundedRectangle(cornerRadius: 10))
+        .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color(red: 0.35, green: 0.65, blue: 1).opacity(0.45), lineWidth: 0.5))
+        .onTapGesture { expanded.toggle() }
+    }
+
+    private var color: Color {
+        switch (decision.action ?? "").uppercased() {
+        case "RAISE", "BET": return Color(red: 0.25, green: 0.85, blue: 0.5)
+        case "FOLD": return Color(red: 1, green: 0.36, blue: 0.36)
+        default: return Color(red: 0.35, green: 0.65, blue: 1)
+        }
+    }
+}
+
 /// 打开 zzpk.vip 网页版，注入假定位 + 轻量 HUD（不覆盖 fetch，靠 seat token 轮询）。
-struct WebGameView: UIViewRepresentable {
+struct WebGameViewRep: UIViewRepresentable {
     @EnvironmentObject var store: AppStore
 
     func makeCoordinator() -> Coordinator { Coordinator(store: store) }
@@ -424,7 +487,7 @@ final class WeakScriptMessageHandler: NSObject, WKScriptMessageHandler {
     }
 }
 
-extension WebGameView {
+extension WebGameViewRep {
     final class Coordinator: NSObject, WKScriptMessageHandler, WKNavigationDelegate, WKUIDelegate {
         var store: AppStore
         weak var webView: WKWebView?
@@ -443,7 +506,7 @@ extension WebGameView {
             ) { [weak self] _ in
                 guard let self else { return }
                 DebugLog.shared.add("[APP] foreground, re-inject HUD")
-                if let wv = self.webView { WebGameView.injectHUD(into: wv, ai: aiName, log: logName) }
+                if let wv = self.webView { WebGameViewRep.injectHUD(into: wv, ai: aiName, log: logName) }
             }
         }
 
@@ -454,17 +517,17 @@ extension WebGameView {
             DebugLog.shared.add("[JS] page finished")
             if !hudReinjected {
                 hudReinjected = true
-                WebGameView.injectHUD(into: webView, ai: aiName, log: logName)
+                WebGameViewRep.injectHUD(into: webView, ai: aiName, log: logName)
             }
             if !locRequested {
                 locRequested = true
-                switch WebGameView.locMgr.authorizationStatus {
+                switch WebGameViewRep.locMgr.authorizationStatus {
                 case .denied, .restricted:
-                    webView.evaluateJavaScript(WebGameView.fakeLocationJS, in: nil, in: WKContentWorld.page) { _ in
+                    webView.evaluateJavaScript(WebGameViewRep.fakeLocationJS, in: nil, in: WKContentWorld.page) { _ in
                         DebugLog.shared.add("[GEO] denied, fallback coords injected")
                     }
                 default:
-                    WebGameView.locMgr.requestWhenInUseAuthorization()
+                    WebGameViewRep.locMgr.requestWhenInUseAuthorization()
                 }
             }
         }
