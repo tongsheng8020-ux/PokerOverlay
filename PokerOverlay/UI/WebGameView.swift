@@ -551,6 +551,8 @@ extension WebGameViewRep {
         let logName = "s" + String(UUID().uuidString.prefix(6)).lowercased()
         private var lastKey = ""
         private var lastRoom = ""
+        private var lastModeRoom = ""
+        private var roomMode = ""
         private var lastMyTurn = false
         private var inFlight = false
 
@@ -720,16 +722,16 @@ extension WebGameViewRep {
             inFlight = true
             defer { inFlight = false }
 
-            let pageRule = ((d["rule"] as? String) ?? "").lowercased()
-            let mode: String
-            if pageRule == "short" || pageRule == "long" {
-                mode = pageRule
-                if pageRule != store.mode {
-                    DebugLog.shared.add("[MODE] 牌桌=\(pageRule) 设置=\(store.mode)，按牌桌走")
-                }
-            } else {
-                mode = store.mode
+            var pageRule = ((d["rule"] as? String) ?? "").lowercased()
+            if ["6+", "shortdeck", "short_deck", "36"].contains(pageRule) { pageRule = "short" }
+            if ["standard", "52"].contains(pageRule) { pageRule = "long" }
+            let roomId = d["room"] as? String ?? ""
+            if (pageRule == "short" || pageRule == "long") && !roomId.isEmpty && roomId != lastModeRoom {
+                lastModeRoom = roomId
+                roomMode = pageRule
+                DebugLog.shared.add("[MODE] 房间 \(roomId) 规则=\(pageRule)")
             }
+            let mode: String = (roomMode == "short" || roomMode == "long") ? roomMode : store.mode
             let raw = "\(mode == "short" ? "S6" : "L6") 网页牌桌 \(hole) | \(board) | P:\(dsp(pot)) C:\(dsp(toCall)) | H:\(dsp(stack)) | 活跃:\(activePlayers)人 | 按钮位:\(button) | 对手:\(oppText)\(history.isEmpty ? "" : " | 行动:\(history)") | 当前注:\(dsp(curBet)) 最小加注到:\(dsp(minRaise)) | 计数单位:1 = \(unit) 筹码 | 合法动作:\(legal) | 注意：C>0 时不能 CHECK，只能 CALL/RAISE/FOLD；C=0 时不能 CALL | 所有尺寸都用上面这个显示单位 | 他行动完轮到我"
             await js("window.zzAiUpdate('分析中…')")
             do {

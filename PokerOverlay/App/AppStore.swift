@@ -7,7 +7,7 @@ import Combine
 final class AppStore: ObservableObject {
     @Published var baseURL: String { didSet { defaults.set(baseURL, forKey: "base") } }
     @Published var pin: String { didSet { defaults.set(pin, forKey: "license") } }
-    @Published var mode: String = "long"
+    @Published var mode: String = "long" { didSet { defaults.set(mode, forKey: "mode") } }
     @Published var raw: String = ""
     @Published var decision: Decision?
     @Published var loading = false
@@ -59,8 +59,10 @@ final class AppStore: ObservableObject {
     init() {
         let savedBase = UserDefaults.standard.string(forKey: "base") ?? "http://64.90.0.27:8099"
         let savedPin = UserDefaults.standard.string(forKey: "license") ?? ""
+        let savedMode = UserDefaults.standard.string(forKey: "mode") ?? "long"
         baseURL = savedBase
         pin = savedPin
+        mode = savedMode
         showPinGate = savedPin.isEmpty
         bridge.onText = { [weak self] text in
             Task { @MainActor in await self?.handleLive(text) }
