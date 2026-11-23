@@ -729,7 +729,8 @@ extension WebGameViewRep {
                     mode: mode, raw: raw,
                     extra: ["hand_id": hand, "street": street, "opponents": opponents,
                             "actions": actions, "hole": hole, "board": board,
-                            "pot": pot, "to_call": toCall, "account": account, "account_name": accountName, "stack": stack]
+                            "pot": pot, "to_call": toCall, "account": account, "account_name": accountName,
+                            "stack": stack, "button": button]
                 )
                 DebugLog.shared.add("[AI] reply \(decision.action ?? "-") \(decision.latency)ms")
                 var act = (decision.action ?? "").uppercased()
