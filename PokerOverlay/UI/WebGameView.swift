@@ -334,7 +334,7 @@ struct WebGameViewRep: UIViewRepresentable {
           if (!q) return;
           if (!q.folded && x.folded) {
             h.push('座' + x.seat + '弃牌');
-            window.__acts.push({ id: x.player_id, street: s.street || '', kind: 'fold', amount: 0 });
+            window.__acts.push({ id: x.player_id, street: s.street || '', kind: 'fold', amount: 0, facing: (s.current_bet || 0) > 0, pot: s.pot || 0 });
           }
           const dc = (x.total_contribution || 0) - (q.total_contribution || 0);
           if (dc > 0) {
@@ -343,11 +343,14 @@ struct WebGameViewRep: UIViewRepresentable {
             let kind = 'bet';
             if (dc <= need + 1) kind = 'call';
             if (x.all_in && !q.all_in) kind = 'allin';
-            window.__acts.push({ id: x.player_id, street: s.street || '', kind: kind, amount: dc });
+            window.__acts.push({ id: x.player_id, street: s.street || '', kind: kind, amount: dc, pot: s.pot || 0 });
           } else if (!q.acted && x.acted && !x.folded) {
             window.__acts.push({ id: x.player_id, street: s.street || '', kind: 'check', amount: 0 });
           }
           if (!q.all_in && x.all_in) h.push('座' + x.seat + '全下');
+          if ((x.hole || []).length > 0) {
+            window.__acts.push({ id: x.player_id, street: s.street || '', kind: 'showdown', amount: 0 });
+          }
         });
         while (h.length > 10) h.shift();
       }
