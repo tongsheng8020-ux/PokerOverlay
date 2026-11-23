@@ -53,6 +53,22 @@ ok("负筹码报警", any("筹码为负" in x for x in app.validate_state(state(
 ok("底池与投入差报警", any("底池" in x for x in app.validate_state(
     state(opponents=[{"contrib": 10}], pot=1000))))
 
+
+# 6) 真实金标 30 手（锁定预期，防回归）
+import os
+gpath = next((x for x in ["/srv/poker/golden_cases.json",
+                          os.path.join(os.path.dirname(os.path.abspath(__file__)), "golden_cases.json")]
+              if os.path.exists(x)), None)
+if gpath:
+    cases = json.load(open(gpath, encoding="utf-8"))
+    for i, g in enumerate(cases):
+        ok("golden%d 成牌" % i, app.hand_category(g["hole"], g["board"]) == g["category"],
+           (g["hole"], g["board"], g["category"]))
+        ok("golden%d 牌面" % i, app.board_texture(g["board"]) == g["texture"], g["texture"])
+        ok("golden%d 听牌" % i, app.draw_info(g["hole"], g["board"]) == g["draw"], g["draw"])
+else:
+    FAIL.append("golden_cases.json missing")
+
 print("PASS", PASS, "FAIL", len(FAIL))
 for f in FAIL:
     print(" -", f)

@@ -1,0 +1,212 @@
+[
+ {
+  "hole": "5d As",
+  "board": "Kh Kd 7s Td 9s",
+  "category": "一对(K)",
+  "texture": "系统判定牌面：湿润（危险度 8/10｜顺子可能｜对子面）",
+  "draw": ""
+ },
+ {
+  "hole": "5d As",
+  "board": "Kh Kd 7s",
+  "category": "一对(K)",
+  "texture": "系统判定牌面：中等（危险度 5/10｜对子面）",
+  "draw": ""
+ },
+ {
+  "hole": "Td 3h",
+  "board": "4s Ks Kh 8s",
+  "category": "一对(K)",
+  "texture": "系统判定牌面：湿润（危险度 7/10｜同花可能｜对子面）",
+  "draw": ""
+ },
+ {
+  "hole": "Td 3h",
+  "board": "4s Ks Kh",
+  "category": "一对(K)",
+  "texture": "系统判定牌面：中等（危险度 6/10｜对子面）",
+  "draw": ""
+ },
+ {
+  "hole": "5s 3d",
+  "board": "Qd Ah Ks",
+  "category": "高牌",
+  "texture": "系统判定牌面：中等（危险度 5/10｜顺子可能）",
+  "draw": ""
+ },
+ {
+  "hole": "As 7c",
+  "board": "8h Ac Jh 4d Kc",
+  "category": "一对(A)",
+  "texture": "系统判定牌面：中等（危险度 6/10｜顺子可能）",
+  "draw": ""
+ },
+ {
+  "hole": "As 7c",
+  "board": "8h Ac Jh 4d",
+  "category": "一对(A)",
+  "texture": "系统判定牌面：中等（危险度 4/10）",
+  "draw": ""
+ },
+ {
+  "hole": "As 7c",
+  "board": "8h Ac Jh",
+  "category": "一对(A)",
+  "texture": "系统判定牌面：中等（危险度 4/10）",
+  "draw": ""
+ },
+ {
+  "hole": "Td 8c",
+  "board": "Kd Ts 2d 7d Th",
+  "category": "三条(T)",
+  "texture": "系统判定牌面：湿润（危险度 7/10｜同花可能｜对子面）",
+  "draw": ""
+ },
+ {
+  "hole": "Td 8c",
+  "board": "Kd Ts 2d",
+  "category": "一对(T)",
+  "texture": "系统判定牌面：中等（危险度 4/10）",
+  "draw": ""
+ },
+ {
+  "hole": "Ac 8s",
+  "board": "4d Jd 4c 5h",
+  "category": "一对(4)",
+  "texture": "系统判定牌面：中等（危险度 5/10｜对子面）",
+  "draw": ""
+ },
+ {
+  "hole": "Ac 8s",
+  "board": "4d Jd 4c",
+  "category": "一对(4)",
+  "texture": "系统判定牌面：中等（危险度 5/10｜对子面）",
+  "draw": ""
+ },
+ {
+  "hole": "7s 6c",
+  "board": "5d 3d 7h 3c 4d",
+  "category": "顺子(7)",
+  "texture": "系统判定牌面：湿润（危险度 8/10｜同花可能｜顺子可能｜对子面）",
+  "draw": ""
+ },
+ {
+  "hole": "7s 6c",
+  "board": "5d 3d 7h 3c",
+  "category": "两对(7,3)",
+  "texture": "系统判定牌面：湿润（危险度 7/10｜顺子可能｜对子面）",
+  "draw": ""
+ },
+ {
+  "hole": "7s 6c",
+  "board": "5d 3d 7h",
+  "category": "一对(7)",
+  "texture": "系统判定牌面：中等（危险度 5/10｜顺子可能）",
+  "draw": ""
+ },
+ {
+  "hole": "As Kc",
+  "board": "4d 7h 9s 8h",
+  "category": "高牌",
+  "texture": "系统判定牌面：中等（危险度 5/10｜顺子可能）",
+  "draw": ""
+ },
+ {
+  "hole": "As Kc",
+  "board": "4d 7h 9s",
+  "category": "高牌",
+  "texture": "系统判定牌面：干燥（危险度 2/10）",
+  "draw": ""
+ },
+ {
+  "hole": "Td Tc",
+  "board": "6c 7d Ks Jd 9s",
+  "category": "一对(T)",
+  "texture": "系统判定牌面：中等（危险度 6/10｜顺子可能）",
+  "draw": ""
+ },
+ {
+  "hole": "Td Tc",
+  "board": "6c 7d Ks Jd",
+  "category": "一对(T)",
+  "texture": "系统判定牌面：中等（危险度 4/10）",
+  "draw": ""
+ },
+ {
+  "hole": "Td Tc",
+  "board": "6c 7d Ks",
+  "category": "一对(T)",
+  "texture": "系统判定牌面：干燥（危险度 3/10）",
+  "draw": ""
+ },
+ {
+  "hole": "8h 8d",
+  "board": "Ah 5d Qc 2h",
+  "category": "一对(8)",
+  "texture": "系统判定牌面：中等（危险度 4/10）",
+  "draw": ""
+ },
+ {
+  "hole": "8h 8d",
+  "board": "Ah 5d Qc",
+  "category": "一对(8)",
+  "texture": "系统判定牌面：干燥（危险度 3/10）",
+  "draw": ""
+ },
+ {
+  "hole": "4d Ks",
+  "board": "8d Jd 9d Qh",
+  "category": "高牌",
+  "texture": "系统判定牌面：中等（危险度 6/10｜同花可能｜顺子可能）",
+  "draw": ""
+ },
+ {
+  "hole": "4d Ks",
+  "board": "8d Jd 9d",
+  "category": "高牌",
+  "texture": "系统判定牌面：中等（危险度 6/10｜同花可能｜顺子可能）",
+  "draw": ""
+ },
+ {
+  "hole": "Qh 3c",
+  "board": "Ah 2s 3h Th 8c",
+  "category": "一对(3)",
+  "texture": "系统判定牌面：中等（危险度 5/10｜同花可能）",
+  "draw": ""
+ },
+ {
+  "hole": "Qh 3c",
+  "board": "Ah 2s 3h Th",
+  "category": "一对(3)",
+  "texture": "系统判定牌面：中等（危险度 5/10｜同花可能）",
+  "draw": ""
+ },
+ {
+  "hole": "5h 3h",
+  "board": "As 2c 4h",
+  "category": "顺子(A)",
+  "texture": "系统判定牌面：干燥（危险度 3/10）",
+  "draw": ""
+ },
+ {
+  "hole": "9h 6h",
+  "board": "4s 7s 3d Kh",
+  "category": "高牌",
+  "texture": "系统判定牌面：中等（危险度 6/10｜顺子可能）",
+  "draw": ""
+ },
+ {
+  "hole": "9h 6h",
+  "board": "4s 7s 3d",
+  "category": "高牌",
+  "texture": "系统判定牌面：中等（危险度 5/10｜顺子可能）",
+  "draw": ""
+ },
+ {
+  "hole": "7c 2s",
+  "board": "9d Jh Tc 8s 6s",
+  "category": "顺子(J)",
+  "texture": "系统判定牌面：中等（危险度 5/10｜顺子可能）",
+  "draw": ""
+ }
+]
