@@ -720,7 +720,16 @@ extension WebGameViewRep {
             inFlight = true
             defer { inFlight = false }
 
-            let mode = store.mode
+            let pageRule = ((d["rule"] as? String) ?? "").lowercased()
+            let mode: String
+            if pageRule == "short" || pageRule == "long" {
+                mode = pageRule
+                if pageRule != store.mode {
+                    DebugLog.shared.add("[MODE] 牌桌=\(pageRule) 设置=\(store.mode)，按牌桌走")
+                }
+            } else {
+                mode = store.mode
+            }
             let raw = "\(mode == "short" ? "S6" : "L6") 网页牌桌 \(hole) | \(board) | P:\(dsp(pot)) C:\(dsp(toCall)) | H:\(dsp(stack)) | 活跃:\(activePlayers)人 | 按钮位:\(button) | 对手:\(oppText)\(history.isEmpty ? "" : " | 行动:\(history)") | 当前注:\(dsp(curBet)) 最小加注到:\(dsp(minRaise)) | 计数单位:1 = \(unit) 筹码 | 合法动作:\(legal) | 注意：C>0 时不能 CHECK，只能 CALL/RAISE/FOLD；C=0 时不能 CALL | 所有尺寸都用上面这个显示单位 | 他行动完轮到我"
             await js("window.zzAiUpdate('分析中…')")
             do {
