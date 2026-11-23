@@ -101,6 +101,7 @@ struct Opponent: Codable, Identifiable {
     var name: String = ""
     var hands: Int = 0
     var vpip: Int = 0
+    var pfr: Int = 0
     var folds: Int = 0
     var allins: Int = 0
     var bets: Int = 0

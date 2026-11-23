@@ -4,6 +4,10 @@ import SwiftUI
 struct PokerOverlayApp: App {
     @StateObject private var store = AppStore()
 
+    init() {
+        DebugLog.installCrashHandler()
+    }
+
     var body: some Scene {
         WindowGroup {
             RootView()

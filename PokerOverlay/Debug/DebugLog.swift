@@ -21,6 +21,29 @@ final class DebugLog: ObservableObject {
         }
     }
 
+    static func installCrashHandler() {
+        NSSetUncaughtExceptionHandler { ex in
+            let text = "\n[CRASH] \(ex.name.rawValue): \(ex.reason ?? "")\n"
+                + ex.callStackSymbols.joined(separator: "\n") + "\n"
+            DebugLog.shared.add(text)
+        }
+        for sig in [SIGABRT, SIGSEGV, SIGBUS, SIGILL, SIGFPE] {
+            signal(sig) { s in
+                let line = "\n[CRASH] signal \(s)\n"
+                if let data = line.data(using: .utf8) {
+                    let path = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
+                        .appendingPathComponent("debug.log").path
+                    let fd = open(path, O_WRONLY | O_APPEND | O_CREAT, 0o644)
+                    if fd >= 0 {
+                        data.withUnsafeBytes { _ = write(fd, $0.baseAddress, data.count) }
+                        close(fd)
+                    }
+                }
+                exit(0)
+            }
+        }
+    }
+
     func add(_ message: String) {
         let line = "\(stroke.string(from: Date())) \(message)"
         entries.append(line)

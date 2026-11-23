@@ -62,6 +62,7 @@ struct OpponentsView: View {
             }
             HStack(spacing: 14) {
                 metric("入池", "\(o.vpip)%")
+                metric("加注", "\(o.pfr)%")
                 metric("弃牌", "\(o.folds)%")
                 metric("AF", String(format: "%.1f", o.af))
                 metric("全下", "\(o.allins)")
